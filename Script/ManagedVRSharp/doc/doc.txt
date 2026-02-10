@@ -1,0 +1,90 @@
+VRSharp 快速使用文档（新手版）
+
+一、插件是什么
+VRSharp 是基于 UnrealSharp 的 VR 交互框架，核心目标是：
+1. 物理驱动的 VR 角色移动
+2. 物理抓取与释放
+3. 手部动画权重联动
+
+你可以直接使用项目内已经做好的蓝图和地图，无需从零搭建。
+
+
+二、最快上手（推荐）
+1. 配置碰撞
+- 导入VRSharpCollision碰撞设置文件    参考图片：`doc/img1.png`
+
+2. 启用插件（务必按照顺序）
+- OpenXR / XRBase / Enhanced Input（建议都启用）
+- 手动导入UnrealSharp并编译
+- 手动导入VRSharp
+
+3. 确认输入映射
+- 项目应已配置 Enhanced Input。    参考图片：`doc/img2.png`
+- 如你新建了自己的项目，记得把输入映射和动作资产一并迁移。
+
+4. 设置近裁切平面    参考图片：`doc/img3.png`
+
+5. 直接打开 Demo 地图
+- 地图：`Maps/VRSharpDemo`
+- 文件：`Content/Maps/VRSharpDemo.umap`
+
+6. 直接使用现成玩家蓝图
+- 玩家蓝图：`Blueprints/BP_VRSharpPlayer`
+- 文件：`Content/Blueprints/BP_VRSharpPlayer.uasset`
+- 你可以把它放进关卡，或者在 GameMode 中设置为默认 Pawn。
+
+
+
+三、现成蓝图资源
+以下资源已提供，可直接测试：
+1. `Blueprints/BP_VRSharpPlayer`         VR玩家
+2. `Blueprints/BP_VRSharpHandRight`      右手预设
+3. `Blueprints/BP_VRSharpHandLeft`       左手预设(继承右手)
+4. `Blueprints/BP_VRSharpGrabbable`      可抓取组件(附加到要抓取物体上)
+5. `Blueprints/BP_VRSharpHandPose`       自定义手部姿势(可选)
+
+
+四、核心类职责（理解用）
+1. `AVRSharpPlayer`
+- 管理 VR 玩家本体、相机、左右手、移动与旋转输入。
+
+2. `AVRSharpHand`
+- 管理手部物理跟随、抓取流程、目标检测、高亮、动画权重。
+
+3. `UVRSharpGrabbable`
+- 挂在可抓取对象上的组件，定义抓取与高亮行为。
+
+4. `UVRSharpHandPose`
+- 用于定义某个抓取点对应的手部姿态（位置/旋转）。
+
+
+五、如何做自己的可抓取物体
+1. 给 Actor 添加组件：`VRSharpGrabbable`
+2. 可选设置高亮材质：`HighlightMaterial`
+3. 可选设置抓取姿态表：`GrabPoses`
+- Key：部件名匹配字符串
+- Value：HandPose 组件名匹配字符串
+
+
+六、进阶：事件扩展（重点）
+你可以在 C# 里订阅事件，做音效、震动、UI 提示等扩展。
+
+1. `AVRSharpHand` 事件
+- `OnBeforeGrab`
+- `OnAfterGrab`
+- `OnBeforeRelease`
+- `OnAfterRelease`
+- `OnEnterHighlighted`
+- `OnExitHighlighted`
+
+2. `UVRSharpGrabbable` 事件
+- `OnBeforeGrab`
+- `OnAfterGrab`
+- `OnBeforeRelease`
+- `OnAfterRelease`
+- `OnEnterHighlighted`
+- `OnExitHighlighted`
+
+说明：
+- Hand 事件适合做“玩家侧逻辑”（手柄反馈、HUD提示）。
+- Grabbable 事件适合做“物体侧逻辑”（换材质、播放音效、状态切换）。

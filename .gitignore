@@ -1,0 +1,26 @@
+﻿# Unreal
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# C#
+**/bin/
+**/obj/
+*.user
+*.suo
+
+# Logs/temp
+*.log
+*.tmp
+
+# OS/IDE
+.vs/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local tooling
+.VSCodeCounter/
+Script/.VSCodeCounter/
