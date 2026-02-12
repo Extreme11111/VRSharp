@@ -9,5 +9,5 @@ A fully physical-based VR framework plugin for Unreal Engine.
 
 ## Documentation
 
-- Website: https://space-art.net/vrsharp
+- Website: http://space-art.net/vrsharp/index.html
 
