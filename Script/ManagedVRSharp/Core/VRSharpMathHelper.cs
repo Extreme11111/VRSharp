@@ -104,10 +104,12 @@ public static class VRSharpMathHelper
     /// <summary>接触深度驱动的姿势积分；距离和半径使用相同单位，权重限制到 0..1。</summary>
     public static float StepFingerContactTarget(float current, float target, float distance, float radius, float dt)
     {
-        current = Math.Clamp(current, 0f, 1f);
-        target = Math.Clamp(target, 0f, 1f);
+        // 无效姿势权重不能传播到后续插值；优先保留另一个有效权重。
+        current = float.IsFinite(current) ? Math.Clamp(current, 0f, 1f)
+            : float.IsFinite(target) ? Math.Clamp(target, 0f, 1f) : 0f;
+        target = float.IsFinite(target) ? Math.Clamp(target, 0f, 1f) : current;
         if (!float.IsFinite(dt) || dt <= 0 || !float.IsFinite(radius) || radius <= 0) return target;
-        if (float.IsNaN(distance)) return current;
+        if (float.IsNaN(distance) || float.IsNegativeInfinity(distance)) return current;
         if (distance > radius)
             return Math.Clamp(Math.Max(current, target) + 3f * dt, 0f, 1f);
         float ratio = Math.Max(distance, 0f) / radius;
