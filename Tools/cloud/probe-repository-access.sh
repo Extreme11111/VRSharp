@@ -10,6 +10,7 @@ cleanup() {
 trap cleanup EXIT
 git config user.name 'github-actions[bot]'
 git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+git lfs install --local
 git switch -c "$branch"
 mkdir -p .cloud-permission-probe
 printf 'VRSharp cloud LFS access check: %s/%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > .cloud-permission-probe/roundtrip.lfsprobe
