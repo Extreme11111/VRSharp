@@ -1,4 +1,4 @@
-﻿# Unreal
+# Unreal
 Binaries/
 Build/
 DerivedDataCache/
@@ -24,3 +24,8 @@ Thumbs.db
 # Local tooling
 .VSCodeCounter/
 Script/.VSCodeCounter/
+
+# Python and Blender authoring caches/backups
+__pycache__/
+*.pyc
+*.blend[0-9]

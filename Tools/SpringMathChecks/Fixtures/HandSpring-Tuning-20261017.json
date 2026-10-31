@@ -1,0 +1,66 @@
+{
+  "reference_hz": 120,
+  "target_total_hand_mass_kg": 0.45,
+  "hands": [
+    {
+      "side": "Right",
+      "old_runtime_mass": 5.547905921936035,
+      "old_reference_inertia": 23.69888687133789,
+      "settings": {
+        "LocationStiffness": 427.1991271972656,
+        "LocationDamping": 41.33759307861328,
+        "RotationStiffness": 397.6812438964844,
+        "RotationDamping": 39.88389205932617,
+        "BodyPullStrength": 5.547905921936035,
+        "MaxForce": 80000.0,
+        "MaxTorque": 800000.0
+      },
+      "body_templates": [
+        {
+          "component": "/VRSharp/Blueprints/BP_VRSharpHandRight.BP_VRSharpHandRight_C:CollisionBox_GEN_VARIABLE",
+          "mass_kg": 0.449
+        },
+        {
+          "component": "/VRSharp/Blueprints/BP_VRSharpHandRight.BP_VRSharpHandRight_C:HandRigidbody_GEN_VARIABLE",
+          "mass_kg": 0.001
+        }
+      ]
+    },
+    {
+      "side": "Left",
+      "old_runtime_mass": 5.547905921936035,
+      "old_reference_inertia": 23.69888687133789,
+      "settings": {
+        "LocationStiffness": 427.1991271972656,
+        "LocationDamping": 41.33759307861328,
+        "RotationStiffness": 397.6812438964844,
+        "RotationDamping": 39.88389205932617,
+        "BodyPullStrength": 5.547905921936035,
+        "MaxForce": 80000.0,
+        "MaxTorque": 800000.0
+      },
+      "body_templates": [
+        {
+          "component": "/VRSharp/Blueprints/BP_VRSharpHandLeft.BP_VRSharpHandLeft_C:CollisionBox_GEN_VARIABLE",
+          "mass_kg": 0.449
+        },
+        {
+          "component": "/VRSharp/Blueprints/BP_VRSharpHandLeft.BP_VRSharpHandLeft_C:HandRigidbody_GEN_VARIABLE",
+          "mass_kg": 0.001
+        }
+      ]
+    }
+  ],
+  "old_physics": {
+    "substepping": true,
+    "max_substep_delta_time": 0.008333333767950535,
+    "max_substeps": 16,
+    "max_physics_delta_time": 0.10000000149011612
+  },
+  "physics": {
+    "substepping": true,
+    "max_substep_delta_time": 0.008333333767950535,
+    "max_substeps": 16,
+    "max_physics_delta_time": 0.10000000149011612
+  }
+}

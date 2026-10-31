@@ -2,8 +2,8 @@
   "profiles": {
     "UnrealSharp": {
       "commandName": "Executable",
-      "executablePath": "D:/Program Files/Epic Games/UE_5.7/Engine/Binaries\\Win64\\UnrealEditor.exe",
-      "commandLineArgs": "\"D:\\_Programming\\Unreal\\VRSharpFramework\\VRSharpFramework.uproject\""
+      "executablePath": "D:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\Win64\\UnrealEditor.exe",
+      "commandLineArgs": "\"D:\\_Programming\\Unreal\\VRSharp2\\VRSharp.uproject\""
     }
   }
 }

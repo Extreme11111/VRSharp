@@ -1,4 +1,4 @@
-namespace VRSharp.Core;
+﻿namespace VRSharp.Core;
 
 using System.Collections.Generic;
 using UnrealSharp;
@@ -96,20 +96,20 @@ public partial class AVRSharpHand : AActor
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere), Category("VRPhysicsHandSettings")]
     public partial bool IsLeft { get; set; }
 
-    /// <summary>VRPhysicsHandSettings: default 2,000</summary>
-    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere), Category("VRPhysicsHandSettings"), ToolTip("default 2,000")]
+    /// <summary>质量归一化位置刚度，单位 s^-2。</summary>
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere), Category("VRPhysicsHandSettings"), ToolTip("位置响应刚度 (s^-2)，独立于手质量。临界阻尼为 2*sqrt(LocationStiffness)。")]
     protected partial float LocationStiffness { get; set; }
 
-    /// <summary>VRPhysicsHandSettings: default 100</summary>
-    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere), Category("VRPhysicsHandSettings"), ToolTip("default 100")]
+    /// <summary>质量归一化位置阻尼，单位 s^-1。</summary>
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere), Category("VRPhysicsHandSettings"), ToolTip("位置阻尼 (s^-1)。运行时不会低于临界值 2*sqrt(LocationStiffness)。")]
     protected partial float LocationDamping { get; set; }
 
-    /// <summary>VRPhysicsHandSettings: default 15,000</summary>
-    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere), Category("VRPhysicsHandSettings"), ToolTip("default 20,000")]
+    /// <summary>惯量归一化旋转刚度，单位 s^-2。</summary>
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere), Category("VRPhysicsHandSettings"), ToolTip("旋转响应刚度 (s^-2)，独立于质量、转动惯量与左右手镜像。")]
     protected partial float RotationStiffness { get; set; }
 
-    /// <summary>VRPhysicsHandSettings: default 700</summary>
-    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere), Category("VRPhysicsHandSettings"), ToolTip("default 500")]
+    /// <summary>惯量归一化旋转阻尼，单位 s^-1。</summary>
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere), Category("VRPhysicsHandSettings"), ToolTip("旋转阻尼 (s^-1)。运行时不会低于临界值 2*sqrt(RotationStiffness)。")]
     protected partial float RotationDamping { get; set; }
 
     /// <summary>VRPhysicsHandSettings: default 80,000</summary>
@@ -119,6 +119,14 @@ public partial class AVRSharpHand : AActor
     /// <summary>VRPhysicsHandSettings: default 80,000</summary>
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere), Category("VRPhysicsHandSettings"), ToolTip("default 80,000")]
     protected partial float MaxTorque { get; set; }
+
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere), Category("VRPhysicsHandSettings"), ToolTip("向玩家身体传递拉力的标定系数，不是手的物理质量。降低手质量时可保留攀爬拉力。")]
+    protected partial float BodyPullStrength { get; set; }
+
+    private UPhysicsSettings? physicsSettings;
+    private bool hasTrackingTarget;
+    private FVector previousTargetLocation;
+    private FQuat previousTargetRotation;
 
     #endregion
 
@@ -151,6 +159,8 @@ public partial class AVRSharpHand : AActor
     public void InitializeHand(bool isLeft)
     {
         IsLeft = isLeft;
+        physicsSettings = GetDefault<UPhysicsSettings>();
+        hasTrackingTarget = false;
         if (IsLeft)
         {
             // HandRigidbody!.RelativeScale3D = new(-HandRigidbody!.RelativeScale3D.X, HandRigidbody!.RelativeScale3D.Y, HandRigidbody!.RelativeScale3D.Z);
@@ -192,18 +202,13 @@ public partial class AVRSharpHand : AActor
     override public void Tick(float deltaSeconds)
     {
         base.Tick(deltaSeconds);
-        EnvironmentCheck();
-
-        // 非抓取状态下更新高亮
         if (!IsGrabbing)
-        {
-            HighlightWithHitResult(targetHitResults);
-        }
+            RefreshGrabTarget();
 
         if (IsGrabbing)
         {
-            UpdateGrabAnimation();
-            UpdateAnimationWeights(deltaSeconds, 0.05f);
+            UpdateGrabAnimation(deltaSeconds);
+            UpdateAnimationWeights(deltaSeconds, 0.20f);
         }
         else
         {
@@ -219,30 +224,91 @@ public partial class AVRSharpHand : AActor
     /// <param name="locationForce"></param>
     /// <param name="rotationForce"></param>
     public void PullHand(FVector targetLocation, FQuat targetRotation, out FVector locationForce, out FVector rotationForce)
-    {
-        locationForce = VRSharpMathHelper.ComputeSpringForce(
-            targetLocation,
-            HandRigidbody!.WorldLocation,
-            HandRigidbody!.GetPhysicsLinearVelocity(),
-            LocationStiffness,
-            LocationDamping);
-        rotationForce = VRSharpMathHelper.ComputeRotationTorque(
-            targetRotation,
-            HandRigidbody!.WorldRotation,
-            HandRigidbody!.GetPhysicsAngularVelocityInRadians(),
-            RotationStiffness,
-            RotationDamping);
-        if (locationForce.LengthSquared() > MaxForce * MaxForce)
-            locationForce = locationForce / locationForce.Length() * MaxForce;
-        if (rotationForce.LengthSquared() > MaxTorque * MaxTorque)
-            rotationForce = rotationForce / rotationForce.Length() * MaxTorque;
+        => PullHand(targetLocation, targetRotation, (float)WorldDeltaSeconds, out locationForce, out rotationForce);
 
-        // 关键：用“在位置施加力”而不是默认的质心施力。
-        // 这样当两只手在不同抓握点拉拽同一个物体时，会自然产生转矩，从而更容易通过“距离拉力”控制旋转。
-        if (HandRigidbody!.IsSimulatingPhysics())
+    /// <summary>提交一帧追踪目标，供 VR、桌面或蓝图控制器共用；返回向玩家传递的拉力。</summary>
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public FVector UpdateTracking(FVector targetLocation, FQuat targetRotation, float deltaSeconds)
+    {
+        PullHand(targetLocation, targetRotation, deltaSeconds, out var force, out _);
+        return force;
+    }
+
+    public void PullHand(FVector targetLocation, FQuat targetRotation, float deltaSeconds, out FVector locationForce, out FVector rotationForce)
+    {
+        locationForce = rotationForce = FVector.Zero;
+        if (HandRigidbody is not { } body || !float.IsFinite(deltaSeconds) || deltaSeconds <= 0)
+            return;
+
+        physicsSettings ??= GetDefault<UPhysicsSettings>();
+        // Chaos 对卡顿帧的物理时间也会截断；必须使用同一个有效时间步。
+        float h = Math.Min(deltaSeconds, Math.Max(physicsSettings.MaxPhysicsDeltaTime, 1e-6f));
+
+        FVector targetVelocity = FVector.Zero;
+        FVector targetAngularVelocity = FVector.Zero;
+        if (hasTrackingTarget && deltaSeconds <= 0.1f && FVector.DistanceSquared(targetLocation, previousTargetLocation) < 10000)
         {
-            HandRigidbody!.AddForceAtLocation(locationForce, HandRigidbody.WorldLocation);
-            HandRigidbody!.AddTorqueInRadians(rotationForce);
+            targetVelocity = (targetLocation - previousTargetLocation) / deltaSeconds;
+            targetAngularVelocity = VRSharpMathHelper.RotationVector(targetRotation, previousTargetRotation) / deltaSeconds;
+        }
+        previousTargetLocation = targetLocation;
+        previousTargetRotation = targetRotation;
+        hasTrackingTarget = true;
+
+        // Weld 后手组件不再拥有独立刚体，必须读取并驱动被抓物体的物理岛。
+        var rigidbody = IsGrabbing && GrabbedObject?.GrabbedComponent is { } grabbedBody ? grabbedBody : body;
+        var angularVelocity = rigidbody.GetPhysicsAngularVelocityInRadians();
+        var angularAcceleration = VRSharpMathHelper.ComputeSpringAcceleration(
+            VRSharpMathHelper.RotationVector(targetRotation, body.WorldRotation),
+            targetAngularVelocity - angularVelocity,
+            RotationStiffness, RotationDamping, h);
+        rotationForce = rigidbody.ScaleByMomentOfInertia(angularAcceleration);
+        double torqueLength = rotationForce.Length();
+        if (torqueLength > MaxTorque && torqueLength > 0)
+            angularAcceleration *= Math.Max(MaxTorque, 0) / torqueLength;
+        rotationForce = VRSharpMathHelper.ClampMagnitude(rotationForce, MaxTorque);
+
+        // 用跟随点处的速度计算阻尼。COM 速度不能代表偏心抓握点的速度。
+        var linearAcceleration = VRSharpMathHelper.ComputeSpringAcceleration(
+            targetLocation - body.WorldLocation,
+            targetVelocity - rigidbody.GetPhysicsLinearVelocityAtPoint(body.WorldLocation),
+            LocationStiffness, LocationDamping, h);
+        locationForce = VRSharpMathHelper.ClampMagnitude(linearAcceleration * Math.Max(BodyPullStrength, 0), MaxForce);
+
+        if (rigidbody.IsSimulatingPhysics())
+        {
+            float mass = Math.Max(rigidbody.Mass, 1e-6f);
+            if (IsGrabbing)
+            {
+                // 抓握时保留杠杆作用：双手不同抓点仍然能够转动物体。
+                int count = Math.Max(GrabbedObject?.GrabCount ?? 1, 1);
+                // 沿当前驱动方向计算抓点有效质量，避免用无关的最小惯量过度削弱阻尼。
+                var inertia = rigidbody.GetInertiaTensor();
+                var lever = body.WorldLocation - rigidbody.GetCenterOfMass();
+                double accelerationLength = linearAcceleration.Length();
+                var direction = accelerationLength > 1e-6 ? linearAcceleration / accelerationLength : FVector.Zero;
+                var localTorque = FQuat.Inverse(rigidbody.WorldRotation).RotateVector(FVector.Cross(lever, direction));
+                double inverseMass = 1 / mass + localTorque.X * localTorque.X / Math.Max(inertia.X, 1e-6)
+                    + localTorque.Y * localTorque.Y / Math.Max(inertia.Y, 1e-6)
+                    + localTorque.Z * localTorque.Z / Math.Max(inertia.Z, 1e-6);
+                double effectiveMass = 1 / inverseMass;
+                var force = VRSharpMathHelper.ClampMagnitude(linearAcceleration * effectiveMass, MaxForce);
+                rigidbody.AddImpulseAtLocation(force * (h / count), body.WorldLocation);
+                rigidbody.AddAngularImpulseInRadians(angularAcceleration * (h / count), velChange: true);
+            }
+            else
+            {
+                // 空手在质心施力，不让 COM 偏移把位置弹簧变成额外的旋转弹簧。
+                // 从下一帧手腕位置反算质心速度，补偿旋转时偏心质心的圆弧位移。
+                var offset = body.WorldLocation - rigidbody.GetCenterOfMass();
+                var rotationStep = MathLibrary.MakeFromRotationVector((angularVelocity + angularAcceleration * h) * h);
+                var offsetAfterStep = rotationStep.RotateVector(offset);
+                var centerVelocityChange = linearAcceleration * h + FVector.Cross(angularVelocity, offset)
+                    - (offsetAfterStep - offset) / h;
+                var equivalentForce = centerVelocityChange * (mass / h);
+                rigidbody.AddImpulse(VRSharpMathHelper.ClampMagnitude(equivalentForce, MaxForce) * h);
+                rigidbody.AddAngularImpulseInRadians(angularAcceleration * h, velChange: true);
+            }
         }
     }
 
@@ -251,14 +317,7 @@ public partial class AVRSharpHand : AActor
     [UFunction]
     private void OnGripStarted(FInputActionValue value, float arg1, float arg2, UInputAction action)
     {
-        // 优先使用缓存的高亮 HitResult（避免重新查找）
-        if (highlightedHitResult.HasValue && HighlightedObject is not null && SystemLibrary.IsValid(HighlightedObject))
-        {
-            GrabWithHitResult([highlightedHitResult.Value], HighlightedObject);
-            return;
-        }
-
-        // Fallback: 无高亮对象时使用射线检测结果
+        TryGrab();
     }
 
     [UFunction]
@@ -325,55 +384,57 @@ public partial class AVRSharpHand : AActor
     /// <param name="deltaSeconds"></param>
     private void UpdateAnimationWeights(float deltaSeconds, float smooth = 0.15f)
     {
-        var t = Math.Clamp(smooth * 120 * deltaSeconds, 0f, 1f);
+        var t = 1f - MathF.Exp(-Math.Max(smooth, 0f) * 120f * Math.Max(deltaSeconds, 0f));
         GraspWeight = float.Lerp(GraspWeight, targetGraspWeight, t);
         IndexWeight = float.Lerp(IndexWeight, targetIndexWeight, t);
         ThumbWeight = float.Lerp(ThumbWeight, targetThumbWeight, t);
     }
 
     /// <summary>
-    /// 抓握时检测每根手指是否碰到物体，碰到则锁定当前弯曲程度
+    /// 每帧累积接触反馈：深入 0.8 半径以内张开，浅接触保持，无接触继续闭合。
     /// </summary>
-    private void UpdateGrabAnimation()
+    private void UpdateGrabAnimation(float deltaSeconds)
     {
-        if (HandMesh is null || GrabbedObject is null) return;
-
-        var grabbedComponent = GrabbedObject.GrabbedComponent;
-        if (grabbedComponent is null) return;
-
-        // 拇指
-        if (CheckFingerCollision(HandMesh.GetSocketLocation(ThumbName!), FingerRadius, grabbedComponent))
-            targetThumbWeight = ThumbWeight;
-
-        // 食指
-        if (CheckFingerCollision(HandMesh.GetSocketLocation(IndexName!), FingerRadius, grabbedComponent))
-            targetIndexWeight = IndexWeight;
-
-        // 中指/无名指/小指（任一碰到即锁定 GraspWeight）
-        if (CheckFingerCollision(HandMesh.GetSocketLocation(MiddleName!), FingerRadius, grabbedComponent) ||
-            CheckFingerCollision(HandMesh.GetSocketLocation(RingName!), FingerRadius, grabbedComponent) ||
-            CheckFingerCollision(HandMesh.GetSocketLocation(PinkyName!), FingerRadius, grabbedComponent))
-            targetGraspWeight = GraspWeight;
+        if (HandMesh is null || GrabbedObject?.GrabbedComponent is not { } component) return;
+        targetThumbWeight = VRSharpMathHelper.StepFingerContactTarget(ThumbWeight, targetThumbWeight,
+            FingerContactDistance(ThumbName, component), FingerRadius, deltaSeconds);
+        targetIndexWeight = VRSharpMathHelper.StepFingerContactTarget(IndexWeight, targetIndexWeight,
+            FingerContactDistance(IndexName, component), FingerRadius, deltaSeconds);
+        // 三指共用一个姿势通道，使用最深的接触，避免另一根手指抵消回弹。
+        float graspDistance = Math.Min(FingerContactDistance(MiddleName, component),
+            Math.Min(FingerContactDistance(RingName, component), FingerContactDistance(PinkyName, component)));
+        targetGraspWeight = VRSharpMathHelper.StepFingerContactTarget(GraspWeight, targetGraspWeight,
+            graspDistance, FingerRadius, deltaSeconds);
     }
 
-    private bool CheckFingerCollision(FVector position, float radius, UPrimitiveComponent targetComponent)
+    private float FingerContactDistance(string? socket, UPrimitiveComponent component)
     {
-        var hit = SphereOverlapComponents(position, radius, GrabObjectTypes, default, null, out var components)
-                  && (components?.Contains(targetComponent) ?? false);
-
+        // 未配置骨骼不反馈，避免把整个 HandMesh 原点误判成指尖。
+        if (HandMesh is null || string.IsNullOrWhiteSpace(socket) || !HandMesh.DoesSocketExist(socket))
+            return float.PositiveInfinity;
+        var position = HandMesh.GetSocketLocation(socket);
+        float distance = component.GetClosestPointOnCollision(position, out var point);
+        if (distance == 0) point = position; // 球心已位于碰撞体内部，视作最深接触。
+        if (distance < 0)
+        {
+            // 复杂碰撞无凸体最近点时，只保持浅接触，不使用无效 ImpactPoint 触发回弹。
+            bool overlaps = SphereOverlapComponents(position, FingerRadius, GrabObjectTypes, default,
+                null, out var components) && components.Contains(component);
+            distance = overlaps ? FingerRadius : float.PositiveInfinity;
+        }
         if (DebugMode)
         {
-            var color = hit ? new FLinearColor(0f, 1f, 0f, 1f) : new FLinearColor(1f, 0f, 0f, 1f);
-            DrawDebugSphere(position, radius, 12, color, 0f, 0f);
+            var color = distance < FingerRadius * 0.8f ? new FLinearColor(1, 0, 0, 1)
+                : distance <= FingerRadius ? new FLinearColor(0, 1, 0, 1) : new FLinearColor(0, 0.5f, 1, 1);
+            DrawDebugSphere(position, FingerRadius, 12, color, 0, 0);
         }
-
-        return hit;
+        return distance;
     }
 
     #endregion
 
     /// <summary>
-    /// 外部调用：抓取指定的 grabbable（优先用缓存的 targetHitResults，找不到再检测指定位置）
+    /// 外部调用：重新检测抓取范围内指定的 grabbable，不使用旧缓存或远距离射线。
     /// </summary>
     [UFunction(FunctionFlags.BlueprintCallable)]
     public void GrabWithGrabbable(UVRSharpGrabbable grabbable, FVector targetLocation)
@@ -381,18 +442,9 @@ public partial class AVRSharpHand : AActor
         if (grabbable is null || GrabSphere is null)
             return;
 
-        // 1. 优先从缓存的 hits 里找
-        if (targetHitResults.Count > 0 && GrabWithHitResult(targetHitResults, grabbable))
-            return;
-
-        // 2. 指定了目标点：从手中心朝 targetLocation 发射射线
-        if (targetLocation != FVector.Zero)
-        {
-            var rayCenter = GrabSphere.WorldLocation + GrabSphere.UpVector * GrabSphere.ScaledSphereRadius;
-            if (SystemLibrary.MultiLineTraceForObjects(rayCenter, targetLocation, GrabObjectTypes, false, null, EDrawDebugTrace.None, out var hits, true)
-                && GrabWithHitResult(hits, grabbable))
-                return;
-        }
+        if (IsGrabbing) return;
+        EnvironmentCheck(grabbable);
+        GrabWithHitResult(targetHitResults, grabbable);
     }
 
     /// <summary>
@@ -401,30 +453,12 @@ public partial class AVRSharpHand : AActor
     /// <param name="hits"></param>
     private void HighlightWithHitResult(List<FHitResult> hits)
     {
-        // WORKAROUND: GetComponentByClass<T>() 在引擎升级后失效
-        static UVRSharpGrabbable? FindGrabbable(AActor? actor)
-        {
-            if (actor is null) return null;
-            var components = actor.GetComponentsByClass<UActorComponent>();
-            return components?.OfType<UVRSharpGrabbable>().FirstOrDefault();
-        }
-
         UVRSharpGrabbable? newHighlight = null;
         FHitResult? newHitResult = null;
-
-        if (hits is not null && hits.Count > 0)
+        if (TrySelectGrabHit(hits, null, out var selected, out var grabbable))
         {
-            // 得到最近grabbable，同时保留对应的 hit
-            var nearestResult = hits.Select(hit => new
-            {
-                grabbable = FindGrabbable(hit.Actor),
-                hitResult = hit,
-            })
-            .Where(x => x.grabbable is not null)
-            .MinBy(x => FVector.DistanceSquared(x.grabbable!.Owner!.ActorLocation, ActorLocation));
-
-            newHighlight = nearestResult?.grabbable;
-            newHitResult = nearestResult?.hitResult;
+            newHighlight = grabbable;
+            newHitResult = selected;
         }
 
         // 如果高亮对象没有变化，只更新 hitResult（不触发事件）
@@ -462,37 +496,78 @@ public partial class AVRSharpHand : AActor
     // 先移除 UFunction 以恢复热重载/编译；后续如需蓝图调用，再改成生成器支持的签名。
     public bool GrabWithHitResult(IList<FHitResult> hits, UVRSharpGrabbable? specificTarget = null)
     {
-        if (hits is null || hits.Count == 0)
+        if (IsGrabbing || !TrySelectGrabHit(hits, specificTarget, out var selected, out var grabbable))
             return false;
+        Grab(grabbable!, selected.ImpactPoint, selected.ImpactNormal, selected.Component.Object!);
+        return true;
+    }
 
-        // WORKAROUND: GetComponentByClass<T>() 在引擎升级后失效
-        // 改用 GetComponentsByClass + LINQ OfType 来获取组件
-        static UVRSharpGrabbable? FindGrabbable(AActor? actor)
+    // Use the actual collision surface and the same origin/range for highlight and grip.
+    private bool TrySelectGrabHit(IList<FHitResult> hits, UVRSharpGrabbable? specificTarget,
+        out FHitResult selected, out UVRSharpGrabbable? grabbable)
+    {
+        selected = default;
+        grabbable = null;
+        if (GrabSphere is null || hits is null) return false;
+        var origin = GrabSphere.WorldLocation;
+        double best = double.PositiveInfinity;
+        double radius = GrabSphere.ScaledSphereRadius + 0.01;
+        foreach (var hit in hits)
         {
-            if (actor is null) return null;
-            var components = actor.GetComponentsByClass<UActorComponent>();
-            return components?.OfType<UVRSharpGrabbable>().FirstOrDefault();
+            var component = hit.Component.Object;
+            var candidate = FindGrabbable(component);
+            if (candidate is null || (specificTarget is not null && candidate != specificTarget)) continue;
+            var point = hit.ImpactPoint;
+            if (hit.StartPenetrating && !TryGetGrabPoint(component!, origin, out point)) continue;
+            double distance = FVector.DistanceSquared(origin, point);
+            if (!double.IsFinite(distance) || distance > radius * radius || distance >= best) continue;
+            best = distance;
+            selected = hit;
+            selected.ImpactPoint = point;
+            if (selected.ImpactNormal.LengthSquared() < 1e-8) selected.ImpactNormal = GrabSphere.UpVector;
+            grabbable = candidate;
         }
+        return grabbable is not null;
+    }
 
-        // 得到最近grabbable
-        var nearestGrabbable = hits.Select(hit => new
-        {
-            // 匿名类
-            grabbable = FindGrabbable(hit.Actor),
-            component = hit.Component,
-            location = hit.ImpactPoint,
-            normal = hit.ImpactNormal,
-        })
-        .Where(x => x.grabbable is not null && (specificTarget is null || x.grabbable == specificTarget)) //过滤得到grabbable
-        .MinBy(hit => FVector.DistanceSquared(hit.location, ActorLocation));    //找到最近grabbable
+    private UVRSharpGrabbable? FindGrabbable(UPrimitiveComponent? component)
+    {
+        if (component is null || !SystemLibrary.IsValid(component) || component.Owner == this) return null;
+        foreach (var item in component.Owner.GetComponentsByClass<UActorComponent>())
+            if (item is UVRSharpGrabbable grabbable && SystemLibrary.IsValid(grabbable)) return grabbable;
+        return null;
+    }
 
-        if (nearestGrabbable is not null)
+    private bool TryGetGrabPoint(UPrimitiveComponent component, FVector origin, out FVector point)
+    {
+        float distance = component.GetClosestPointOnCollision(origin, out point);
+        if (distance >= 0)
         {
-            Grab(nearestGrabbable.grabbable!, nearestGrabbable.location, nearestGrabbable.normal, nearestGrabbable.component.Object!);
+            // UE returns zero when the hand is inside a collision volume.
+            if (distance == 0) point = origin;
             return true;
         }
+        // Complex-only collision has no convex closest-point query. Use a bounded
+        // component trace instead of treating its bounds/Actor pivot as a surface.
+        var end = origin + MathLibrary.Normal(component.WorldLocation - origin) * GrabSphere!.ScaledSphereRadius;
+        return component.LineTraceComponent(origin, end, true, false, false, out point, out _, out _, out _);
+    }
 
-        return false;
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public UVRSharpGrabbable? RefreshGrabTarget()
+    {
+        if (IsGrabbing) return GrabbedObject;
+        EnvironmentCheck();
+        HighlightWithHitResult(targetHitResults);
+        return HighlightedObject;
+    }
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool TryGrab()
+    {
+        if (IsGrabbing) return false;
+        RefreshGrabTarget();
+        return GrabWithHitResult(targetHitResults);
     }
 
 
@@ -582,33 +657,46 @@ public partial class AVRSharpHand : AActor
     /// <summary>
     /// 每帧检测手下方的 grabbable，缓存到 targetHitResults
     /// </summary>
-    private void EnvironmentCheck()
+    private void EnvironmentCheck(UVRSharpGrabbable? specificTarget = null)
     {
-        EDrawDebugTrace eDrawDebugTrace = DebugMode ? EDrawDebugTrace.ForOneFrame : EDrawDebugTrace.None;
-
         targetHitResults.Clear();
         if (GrabSphere is null) return;
-
-        var rayCenter = GrabSphere.WorldLocation + GrabSphere.UpVector * GrabSphere.ScaledSphereRadius;
-        var rayEnd = rayCenter - GrabSphere.UpVector * GrabSphere.ScaledSphereRadius * 2;
-
-        // 优先射线检测
-        // TODO: 检测对象类型为 EGrabObjectTypes
-        if (MultiLineTraceForObjects(rayCenter, rayEnd, GrabObjectTypes, false, null, eDrawDebugTrace, out var lineHits, true)
-            && lineHits?.Count > 0)
+        var origin = GrabSphere.WorldLocation;
+        float radius = GrabSphere.ScaledSphereRadius;
+        var debug = DebugMode ? EDrawDebugTrace.ForOneFrame : EDrawDebugTrace.None;
+        // Preserve the configured palm-facing axis (-GrabSphere.UpVector), but
+        // start at the sphere centre: the rear half must not win the forward ray.
+        MultiLineTraceForObjects(origin, origin - GrabSphere.UpVector * radius,
+            GrabObjectTypes, false, [this], debug, out var lineHits, true);
+        if (TrySelectGrabHit(lineHits, specificTarget, out var lineHit, out _))
         {
-            foreach (var hit in lineHits)
-                targetHitResults.Add(hit);
+            targetHitResults.Add(lineHit);
+            return;
         }
 
-        // 射线没有结果则用球形检测
-        if (targetHitResults.Count == 0
-            && MultiSphereTraceForObjects(GrabSphere.WorldLocation, GrabSphere.WorldLocation, GrabSphere.ScaledSphereRadius, GrabObjectTypes, false, null, eDrawDebugTrace, out var sphereHits, true)
-            && sphereHits?.Count > 0)
+        // A hit on a non-grabbable object must not suppress nearby candidates.
+        if (!SphereOverlapComponents(origin, radius, GrabObjectTypes, default, [this], out var components)) return;
+        foreach (var component in components)
         {
-            foreach (var hit in sphereHits)
-                targetHitResults.Add(hit);
+            var candidate = FindGrabbable(component);
+            if (candidate is null || (specificTarget is not null && candidate != specificTarget)
+                || !TryGetGrabPoint(component, origin, out var point)) continue;
+            targetHitResults.Add(new FHitResult
+            {
+                Component = component,
+                BlockingHit = true,
+                ImpactPoint = point,
+                Location = point,
+                ImpactNormal = MathLibrary.Normal(origin - point),
+            });
         }
+        // Cache a single winner so highlighting and actual grabbing cannot diverge.
+        if (TrySelectGrabHit(targetHitResults, specificTarget, out var nearest, out _))
+        {
+            targetHitResults.Clear();
+            targetHitResults.Add(nearest);
+        }
+        else targetHitResults.Clear();
     }
 
     private void SetAllAnimationWeights(float weight)

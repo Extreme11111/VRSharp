@@ -1,0 +1,2069 @@
+{
+  "length_units": "cm",
+  "angular_units": "degrees",
+  "parts": {
+    "SM_Lab_ReactorStructure__Collar_0_28": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__Collar_0_28",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__Collar_0_48": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__Collar_0_48",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__Collar_0_69": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__Collar_0_69",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__Collar_6_35": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__Collar_6_35",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__Collar_6_58": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__Collar_6_58",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__Collar_6_85": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__Collar_6_85",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__Gasket_0_38": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__Gasket_0_38",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__Gasket_0_78": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__Gasket_0_78",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__Gasket_6_22": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__Gasket_6_22",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__Gasket_6_72": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__Gasket_6_72",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__RetainingRing_0_87": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__RetainingRing_0_87",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__RetainingRing_6_12": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__RetainingRing_6_12",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_00": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_00",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_00": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_00",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__SupportStrut_0": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__SupportStrut_0",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_01": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_01",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_01": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_01",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_02": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_02",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_02": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_02",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__SupportStrut_2": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__SupportStrut_2",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_03": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_03",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_03": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_03",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_04": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_04",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_04": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_04",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__SupportStrut_4": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__SupportStrut_4",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_05": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_05",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_05": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_05",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_06": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_06",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_06": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_06",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__SupportStrut_6": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__SupportStrut_6",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_07": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_07",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_07": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_07",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_08": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_08",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_08": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_08",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__SupportStrut_8": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__SupportStrut_8",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_09": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_09",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_09": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_09",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_10": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_10",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_10": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_10",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__SupportStrut_10": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__SupportStrut_10",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_11": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_11",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_11": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_11",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_12": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_12",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_12": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_12",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__SupportStrut_12": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__SupportStrut_12",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_13": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_13",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_13": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_13",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_14": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_14",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_14": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_14",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__SupportStrut_14": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__SupportStrut_14",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__LowerArmor_15": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__LowerArmor_15",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorStructure__UpperArmor_15": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorStructure__UpperArmor_15",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorGlass__Glass_00": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorGlass__Glass_00",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorGlass__Glass_01": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorGlass__Glass_01",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorGlass__Glass_02": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorGlass__Glass_02",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorGlass__Glass_03": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorGlass__Glass_03",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorGlass__Glass_04": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorGlass__Glass_04",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorGlass__Glass_05": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorGlass__Glass_05",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorGlass__Glass_06": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorGlass__Glass_06",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorGlass__Glass_07": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorGlass__Glass_07",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorGlass__Glass_08": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorGlass__Glass_08",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorGlass__Glass_09": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorGlass__Glass_09",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorGlass__Glass_10": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorGlass__Glass_10",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorGlass__Glass_11": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorGlass__Glass_11",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorLight": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorLight",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_0_A": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_0_A",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_0_B": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_0_B",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_1_A": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_1_A",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_1_B": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_1_B",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_2_A": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_2_A",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_2_B": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_2_B",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_3_A": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_3_A",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_3_B": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_3_B",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_4_A": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_4_A",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_4_B": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_4_B",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_5_A": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_5_A",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_5_B": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_5_B",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_6_A": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_6_A",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_6_B": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_6_B",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_7_A": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_7_A",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorHarness__Cable_7_B": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorHarness__Cable_7_B",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Dais": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Dais",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_RailQuarter": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_RailQuarter",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_FloorTile": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_FloorTile",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_FloorLight": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_FloorLight",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_WallBay": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_WallBay",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_WallBay__Panel_1_0": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_WallBay__Panel_1_0",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_WallBay__Panel_2_85": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_WallBay__Panel_2_85",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_WallBay__Panel_4_1": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_WallBay__Panel_4_1",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Column": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Column",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_CeilingBeam": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_CeilingBeam",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_CeilingPanel": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_CeilingPanel",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Luminaire": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Luminaire",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_GalleryTile": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_GalleryTile",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_RailStraight": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_RailStraight",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_StairFlight": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_StairFlight",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Console": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Console__Cabinet_0_Shell": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Cabinet_0_Shell",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Console__Cabinet_0_Drawer_0": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Cabinet_0_Drawer_0",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        48.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_Console__Cabinet_0_Drawer_0_Handle": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Cabinet_0_Drawer_0_Handle",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": "Cabinet_0_Drawer_0"
+    },
+    "SM_Lab_Console__Cabinet_0_Drawer_1": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Cabinet_0_Drawer_1",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        48.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_Console__Cabinet_0_Drawer_1_Handle": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Cabinet_0_Drawer_1_Handle",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": "Cabinet_0_Drawer_1"
+    },
+    "SM_Lab_Console__Cabinet_0_Drawer_2": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Cabinet_0_Drawer_2",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        48.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_Console__Cabinet_0_Drawer_2_Handle": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Cabinet_0_Drawer_2_Handle",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": "Cabinet_0_Drawer_2"
+    },
+    "SM_Lab_Console__Cabinet_1_Shell": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Cabinet_1_Shell",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Console__Cabinet_1_Drawer_0": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Cabinet_1_Drawer_0",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        48.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_Console__Cabinet_1_Drawer_0_Handle": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Cabinet_1_Drawer_0_Handle",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": "Cabinet_1_Drawer_0"
+    },
+    "SM_Lab_Console__Cabinet_1_Drawer_1": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Cabinet_1_Drawer_1",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        48.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_Console__Cabinet_1_Drawer_1_Handle": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Cabinet_1_Drawer_1_Handle",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": "Cabinet_1_Drawer_1"
+    },
+    "SM_Lab_Console__Cabinet_1_Drawer_2": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Cabinet_1_Drawer_2",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        48.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_Console__Cabinet_1_Drawer_2_Handle": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Cabinet_1_Drawer_2_Handle",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": "Cabinet_1_Drawer_2"
+    },
+    "SM_Lab_Console__Display_00": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Display_00",
+      "motion": "tilt",
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "travel": [
+        -25,
+        25
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Console__Display_01": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Display_01",
+      "motion": "tilt",
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "travel": [
+        -25,
+        25
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Console__Display_02": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Display_02",
+      "motion": "tilt",
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "travel": [
+        -25,
+        25
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Console__Keyboard": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Keyboard",
+      "motion": "pickup",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Console__Mouse": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Console__Mouse",
+      "motion": "pickup",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Chair": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Chair",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Chair__Seat": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Chair__Seat",
+      "motion": "swivel",
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "travel": [
+        -180,
+        180
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Chair__Backrest": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Chair__Backrest",
+      "motion": "hinge",
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "travel": [
+        -20,
+        5
+      ],
+      "travel_units": "degrees",
+      "parent_role": "Seat"
+    },
+    "SM_Lab_Chair__Armrest_-1": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Chair__Armrest_-1",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": "Seat"
+    },
+    "SM_Lab_Chair__Armrest_1": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Chair__Armrest_1",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": "Seat"
+    },
+    "SM_Lab_Chair__Caster_0": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Chair__Caster_0",
+      "motion": "roll",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Chair__Caster_1": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Chair__Caster_1",
+      "motion": "roll",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Chair__Caster_2": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Chair__Caster_2",
+      "motion": "roll",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Chair__Caster_3": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Chair__Caster_3",
+      "motion": "roll",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Chair__Caster_4": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Chair__Caster_4",
+      "motion": "roll",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_00": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_00",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_01": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_01",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_02": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_02",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_03": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_03",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_04": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_04",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_05": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_05",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_06": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_06",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_07": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_07",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_08": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_08",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_09": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_09",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_10": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_10",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_11": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_11",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_12": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_12",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_13": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_13",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_14": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_14",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ServerRack__ServerBlade_15": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ServerRack__ServerBlade_15",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        65.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_InstrumentBench": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_InstrumentBench",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_InstrumentBench__Cabinet_0_Shell": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_InstrumentBench__Cabinet_0_Shell",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_InstrumentBench__Cabinet_0_Drawer_0": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_InstrumentBench__Cabinet_0_Drawer_0",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        48.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_InstrumentBench__Cabinet_0_Drawer_0_Handle": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_InstrumentBench__Cabinet_0_Drawer_0_Handle",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": "Cabinet_0_Drawer_0"
+    },
+    "SM_Lab_InstrumentBench__Cabinet_0_Drawer_1": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_InstrumentBench__Cabinet_0_Drawer_1",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        48.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_InstrumentBench__Cabinet_0_Drawer_1_Handle": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_InstrumentBench__Cabinet_0_Drawer_1_Handle",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": "Cabinet_0_Drawer_1"
+    },
+    "SM_Lab_InstrumentBench__Cabinet_0_Drawer_2": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_InstrumentBench__Cabinet_0_Drawer_2",
+      "motion": "slide",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        0,
+        48.0
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_InstrumentBench__Cabinet_0_Drawer_2_Handle": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_InstrumentBench__Cabinet_0_Drawer_2_Handle",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": "Cabinet_0_Drawer_2"
+    },
+    "SM_Lab_InstrumentBench__Display_00": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_InstrumentBench__Display_00",
+      "motion": "tilt",
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "travel": [
+        -25,
+        25
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_InstrumentBench__Instrument_N0_55": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_InstrumentBench__Instrument_N0_55",
+      "motion": "pickup",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_InstrumentBench__Instrument_N0_25": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_InstrumentBench__Instrument_N0_25",
+      "motion": "pickup",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_EquipmentCabinet": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_EquipmentCabinet",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_EquipmentCabinet__Door_0_4": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_EquipmentCabinet__Door_0_4",
+      "motion": "hinge",
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "travel": [
+        0,
+        110
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_EquipmentCabinet__Door_0_4_Handle": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_EquipmentCabinet__Door_0_4_Handle",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": "Door_0_4"
+    },
+    "SM_Lab_EquipmentCabinet__Door_1_1": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_EquipmentCabinet__Door_1_1",
+      "motion": "hinge",
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "travel": [
+        0,
+        110
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_EquipmentCabinet__Door_1_1_Handle": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_EquipmentCabinet__Door_1_1_Handle",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": "Door_1_1"
+    },
+    "SM_Lab_EquipmentCabinet__Door_1_8": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_EquipmentCabinet__Door_1_8",
+      "motion": "hinge",
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "travel": [
+        0,
+        110
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_EquipmentCabinet__Door_1_8_Handle": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_EquipmentCabinet__Door_1_8_Handle",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": "Door_1_8"
+    },
+    "SM_Lab_EquipmentCabinet__Display_00": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_EquipmentCabinet__Display_00",
+      "motion": "tilt",
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "travel": [
+        -25,
+        25
+      ],
+      "travel_units": "degrees",
+      "parent_role": "Door_1_8"
+    },
+    "SM_Lab_Cart": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Cart",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Cart__Display_00": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Cart__Display_00",
+      "motion": "tilt",
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "travel": [
+        -25,
+        25
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_RobotArm": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_RobotArm",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_RobotArm__Link_0": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_RobotArm__Link_0",
+      "motion": "hinge",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        -90,
+        90
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_RobotArm__Link_1": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_RobotArm__Link_1",
+      "motion": "hinge",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        -90,
+        90
+      ],
+      "travel_units": "degrees",
+      "parent_role": "Link_0"
+    },
+    "SM_Lab_RobotArm__Link_2": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_RobotArm__Link_2",
+      "motion": "hinge",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "travel": [
+        -90,
+        90
+      ],
+      "travel_units": "degrees",
+      "parent_role": "Link_1"
+    },
+    "SM_Lab_RobotArm__CableHarness": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_RobotArm__CableHarness",
+      "motion": "flexible",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_RobotArm__Wrist": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_RobotArm__Wrist",
+      "motion": "swivel",
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "travel": [
+        -180,
+        180
+      ],
+      "travel_units": "degrees",
+      "parent_role": "Link_2"
+    },
+    "SM_Lab_RobotArm__GripperFinger_0": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_RobotArm__GripperFinger_0",
+      "motion": "hinge",
+      "axis": [
+        0.0,
+        1.0,
+        0
+      ],
+      "travel": [
+        0,
+        45
+      ],
+      "travel_units": "degrees",
+      "parent_role": "Wrist"
+    },
+    "SM_Lab_RobotArm__GripperFinger_1": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_RobotArm__GripperFinger_1",
+      "motion": "hinge",
+      "axis": [
+        0.8660254037844387,
+        -0.4999999999999998,
+        0
+      ],
+      "travel": [
+        0,
+        45
+      ],
+      "travel_units": "degrees",
+      "parent_role": "Wrist"
+    },
+    "SM_Lab_RobotArm__GripperFinger_2": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_RobotArm__GripperFinger_2",
+      "motion": "hinge",
+      "axis": [
+        -0.8660254037844385,
+        -0.5000000000000004,
+        0
+      ],
+      "travel": [
+        0,
+        45
+      ],
+      "travel_units": "degrees",
+      "parent_role": "Wrist"
+    },
+    "SM_Lab_WallDisplay__Display_00": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_WallDisplay__Display_00",
+      "motion": "tilt",
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "travel": [
+        -25,
+        25
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_WallDisplay": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_WallDisplay",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Whiteboard": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Whiteboard",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_WindowFrame": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_WindowFrame",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_WindowGlass": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_WindowGlass",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_DoorPortal": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_DoorPortal",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Conduit": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Conduit",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_CableTray": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_CableTray",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_FireBottle": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_FireBottle",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Mug": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Mug",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ToolCase": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ToolCase",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ToolCase__Lid": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ToolCase__Lid",
+      "motion": "hinge",
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "travel": [
+        0,
+        110
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ToolCase__Latch_N0_16": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ToolCase__Latch_N0_16",
+      "motion": "hinge",
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "travel": [
+        0,
+        85
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ToolCase__Latch_0_16": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ToolCase__Latch_0_16",
+      "motion": "hinge",
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "travel": [
+        0,
+        85
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ToolCase__Handle": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ToolCase__Handle",
+      "motion": "hinge",
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "travel": [
+        0,
+        90
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_SampleCanister": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_SampleCanister",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_SampleCanister__Base": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_SampleCanister__Base",
+      "motion": "fixed",
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "travel": [
+        0,
+        180
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_SampleCanister__Cap": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_SampleCanister__Cap",
+      "motion": "twist",
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "travel": [
+        0,
+        180
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_SampleCanister__Sleeve": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_SampleCanister__Sleeve",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_SampleCanister__Sample": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_SampleCanister__Sample",
+      "motion": "pickup",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorTerminal": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorTerminal",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorTerminal__Display_00": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorTerminal__Display_00",
+      "motion": "tilt",
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "travel": [
+        -25,
+        25
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorTerminal__Button_0": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorTerminal__Button_0",
+      "motion": "press",
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "travel": [
+        0,
+        0.7000000000000001
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorTerminal__Button_1": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorTerminal__Button_1",
+      "motion": "press",
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "travel": [
+        0,
+        0.7000000000000001
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorTerminal__Button_2": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorTerminal__Button_2",
+      "motion": "press",
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "travel": [
+        0,
+        0.7000000000000001
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorTerminal__Button_3": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorTerminal__Button_3",
+      "motion": "press",
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "travel": [
+        0,
+        0.7000000000000001
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorTerminal__Button_4": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorTerminal__Button_4",
+      "motion": "press",
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "travel": [
+        0,
+        0.7000000000000001
+      ],
+      "travel_units": "cm",
+      "parent_role": null
+    },
+    "SM_Lab_AccessRamp": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_AccessRamp",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_ReactorSuspension": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_ReactorSuspension",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_StairLanding": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_StairLanding",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_RobotPedestal": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_RobotPedestal",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_RobotPedestal__ServiceDoor": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_RobotPedestal__ServiceDoor",
+      "motion": "hinge",
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "travel": [
+        0,
+        110
+      ],
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_Subfloor": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_Subfloor",
+      "motion": "fixed",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    },
+    "SM_Lab_DaisDeckPanel": {
+      "asset": "/VRSharp/Lab/Meshes/SM_Lab_DaisDeckPanel",
+      "motion": "removable",
+      "axis": null,
+      "travel": null,
+      "travel_units": "degrees",
+      "parent_role": null
+    }
+  }
+}

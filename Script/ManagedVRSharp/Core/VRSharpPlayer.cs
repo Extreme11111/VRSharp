@@ -1,5 +1,6 @@
-namespace VRSharp.Core;
+﻿namespace VRSharp.Core;
 
+using System.Collections.Generic;
 using UnrealSharp;
 using UnrealSharp.Attributes;
 using UnrealSharp.Core.Attributes;
@@ -28,6 +29,13 @@ public partial class AVRSharpPlayer : APawn
     // VR相机
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere, DefaultComponent = true, AttachmentComponent = nameof(VROrigin))]
     public partial UCameraComponent? Camera { get; set; }
+
+    // Camera 局部空间中的颈部标记，可直接在蓝图中调整位置。
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere, DefaultComponent = true, AttachmentComponent = nameof(Camera))]
+    public partial USceneComponent? Neck { get; set; }
+
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere, DefaultComponent = true, AttachmentComponent = nameof(Camera))]
+    public partial USphereComponent? HeadCollision { get; set; }
 
     // 左手运动控制器
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere, DefaultComponent = true, AttachmentComponent = nameof(VROrigin))]
@@ -150,12 +158,24 @@ public partial class AVRSharpPlayer : APawn
         CapsuleRadius = 18.0f;
         CapsuleAdditionalHeight = 15.0f;
         CapsuleSubHeight = 0f;
+        MaxStepHeight = 35f;
+        WalkableSlopeAngle = 46f;
+        GroundProbeDistance = 6f;
+        MovementResponse = 12f;
+        AirControl = 0.15f;
+        StepSmoothingSpeed = 10f;
 
         // 1. 配置物理胶囊体
         BodyCapsule!.SetCollisionProfileName("VRPlayer");
         BodyCapsule!.SetCapsuleSize(CapsuleRadius, 88.0f);
         BodyCapsule!.SimulatePhysics = true;
         BodyCapsule!.SetUseCCD(true);
+
+        Neck!.SetRelativeLocation(new FVector(-5, 0, -12), false, out _, false);
+        HeadCollision!.SetSphereRadius(15);
+        HeadCollision.SetCollisionProfileName("VRPlayer");
+        HeadCollision.SimulatePhysics = false;
+        HeadCollision.SetUseCCD(true);
 
         // 2. 约束运动控制器的旋转，防止玩家角色像球一样转动
         // WORKFLOW 在蓝图约束旋转
@@ -169,6 +189,17 @@ public partial class AVRSharpPlayer : APawn
     public override void BeginPlay()
     {
         base.BeginPlay();
+        TickGroup = ETickingGroup.TG_PrePhysics;
+        AddTickPrerequisiteComponent(LeftController!);
+        AddTickPrerequisiteComponent(RightController!);
+
+        // Copy custom object-channel responses as well as the named profile.
+        HeadCollision!.SetCollisionProfileName(BodyCapsule!.CollisionProfileName);
+        HeadCollision.CollisionObjectType = BodyCapsule.CollisionObjectType;
+        HeadCollision.CollisionEnabled = BodyCapsule.CollisionEnabled;
+        for (int channel = 0; channel < (int)ECollisionChannel.ECC_OverlapAll_Deprecated; channel++)
+            HeadCollision.SetCollisionResponseToChannel((ECollisionChannel)channel,
+                BodyCapsule.GetCollisionResponseToChannel((ECollisionChannel)channel));
 
         // 设置追踪原点为"地面"，确保HMD的高度计算是基于玩家游玩空间的地面。
         UHeadMountedDisplayFunctionLibrary.TrackingOrigin = EHMDTrackingOrigin.LocalFloor;
@@ -178,6 +209,8 @@ public partial class AVRSharpPlayer : APawn
         RightHand = SpawnActor(RightHandClass, default, ESpawnActorCollisionHandlingMethod.AlwaysSpawn);
         LeftHand.InitializeHand(true);
         RightHand.InitializeHand(false);
+        LeftHand.SetActorTransform(new FTransform(LeftControllerMesh!.WorldRotation, LeftControllerMesh.WorldLocation, LeftHand.ActorScale3D), false, out _, true);
+        RightHand.SetActorTransform(new FTransform(RightControllerMesh!.WorldRotation, RightControllerMesh.WorldLocation, RightHand.ActorScale3D), false, out _, true);
 
         GetLocalPlayerSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetPlayerController(0)).AddMappingContext(InputMappingContext, 0);
 
@@ -186,6 +219,8 @@ public partial class AVRSharpPlayer : APawn
             LeftHand.InitializeInputEvents(uEnhancedInputComponent);
             RightHand.InitializeInputEvents(uEnhancedInputComponent);
             uEnhancedInputComponent.BindAction(MoveAction!, ETriggerEvent.Triggered, OnMoveInput);
+            uEnhancedInputComponent.BindAction(MoveAction!, ETriggerEvent.Completed, OnMoveInput);
+            uEnhancedInputComponent.BindAction(MoveAction!, ETriggerEvent.Canceled, OnMoveInput);
             uEnhancedInputComponent.BindAction(RotateAction!, ETriggerEvent.Triggered, OnRotateInput);
             uEnhancedInputComponent.BindAction(JumpAction!, ETriggerEvent.Triggered, OnJumpInput);
         }
@@ -196,13 +231,15 @@ public partial class AVRSharpPlayer : APawn
         base.Tick(deltaSeconds);
 
         // 修正碰撞(匹配身高&水平位移)
-        MatchCapsuleHeight();
+        stepVisualOffset *= Math.Exp(-Math.Max(StepSmoothingSpeed, 0) * deltaSeconds);
         MoveCapsuleXYToCamera();
+        MatchCapsuleHeight();
+        ConstrainHeadCollision();
 
         // 手部跟随
-        LeftHand!.PullHand(LeftControllerMesh!.WorldLocation, LeftControllerMesh!.WorldRotation, out var locationForceLeft, out _);
+        var locationForceLeft = LeftHand!.UpdateTracking(LeftControllerMesh!.WorldLocation, LeftControllerMesh!.WorldRotation, deltaSeconds);
         BodyCapsule!.AddForceAtLocation(-locationForceLeft, LeftHand!.ActorLocation);
-        RightHand!.PullHand(RightControllerMesh!.WorldLocation, RightControllerMesh!.WorldRotation, out var locationForceRight, out _);
+        var locationForceRight = RightHand!.UpdateTracking(RightControllerMesh!.WorldLocation, RightControllerMesh!.WorldRotation, deltaSeconds);
         BodyCapsule!.AddForceAtLocation(-locationForceRight, RightHand!.ActorLocation);
 
         // 移动
@@ -218,7 +255,7 @@ public partial class AVRSharpPlayer : APawn
     [UFunction]
     private void OnMoveInput(FInputActionValue inputValue, float arg1, float arg2, UInputAction uInputAction)
     {
-        inputVelocity = inputValue.GetAxis3D();
+        SetMovementInput(inputValue.GetAxis3D());
     }
     [UFunction]
     private void OnRotateInput(FInputActionValue inputValue, float arg1, float arg2, UInputAction uInputAction)
@@ -240,27 +277,6 @@ public partial class AVRSharpPlayer : APawn
     /// 移动逻辑
     /// </summary>
     /// <param name="deltaSeconds"></param>
-    private void MovementUpdate(float deltaSeconds)
-    {
-        // 移动方向向量
-        FVector moveFwdDir = Camera!.ForwardVector - FVector.Dot(Camera!.ForwardVector, ActorUpVector) * ActorUpVector;
-        FVector moveRightDir = -FVector.Cross(moveFwdDir, ActorUpVector);
-
-        CurrentVelocity = moveFwdDir * inputVelocity.Y * AccelerationSpeed * deltaSeconds * 100
-                        + moveRightDir * inputVelocity.X * AccelerationSpeed * deltaSeconds * 100;
-        if (CurrentVelocity.LengthSquared() > MaxSpeed * MaxSpeed)
-        {
-            CurrentVelocity = MathLibrary.Normal(CurrentVelocity) * MaxSpeed;
-        }
-
-        var force = (CurrentVelocity - BodyCapsule!.GetPhysicsLinearVelocity()) * MoveForce;
-        BodyCapsule!.AddForce(force);
-
-        inputVelocity *= 0.9f;
-        if (inputVelocity.LengthSquared() < 0.1f)
-            inputVelocity = FVector.Zero;
-    }
-
     /// <summary>
     /// 检测手部与玩家距离，超出 ReleaseRadius 时强制松开抓握
     /// </summary>
@@ -280,10 +296,12 @@ public partial class AVRSharpPlayer : APawn
     /// <param name="deltaSeconds"></param>
     private void MoveCapsuleXYToCamera()
     {
-        FVector headOffset = Camera!.WorldLocation - ActorLocation;
+        FVector headOffset = Neck!.WorldLocation - ActorLocation;
         headOffset -= FVector.Dot(headOffset, ActorUpVector) * ActorUpVector;
-        AddActorWorldOffset(headOffset, false, out _, false);
-        VROrigin!.AddWorldOffset(-headOffset, false, out _, false);
+        var previous = ActorLocation;
+        AddActorWorldOffset(headOffset, true, out _, true);
+        // Only compensate the displacement that collision actually allowed.
+        VROrigin!.AddWorldOffset(previous - ActorLocation, false, out _, false);
     }
 
     /// <summary>
@@ -292,9 +310,46 @@ public partial class AVRSharpPlayer : APawn
     /// </summary>
     private void MatchCapsuleHeight()
     {
-        var height = (float)Camera!.RelativeLocation.Z + CapsuleAdditionalHeight;
-        BodyCapsule!.SetCapsuleSize(CapsuleRadius, height / 2 - CapsuleSubHeight / 2);
-        VROrigin!.SetRelativeLocation(VROrigin.RelativeLocation with { Z = -height / 2 - CapsuleSubHeight / 2 }, false, out _, false);
+        var body = BodyCapsule!;
+        float oldHalfHeight = body.ScaledCapsuleHalfHeight;
+        // 保留旧参数语义：AdditionalHeight 是头顶余量，SubHeight 是脚底升高差。
+        // 默认球半径 15、AdditionalHeight 15 时，球心恰好位于 Camera。
+        HeadCollision!.SetRelativeLocation(HeadCollision.RelativeLocation with
+        { Z = CapsuleAdditionalHeight - HeadCollision.UnscaledSphereRadius }, false, out _, false);
+        float height = (float)Camera!.RelativeLocation.Z + CapsuleAdditionalHeight;
+        float halfHeight = oldHalfHeight;
+        if (Camera.RelativeLocation.Z > 20)
+        {
+            // 在追踪空间计算高度，避免身体中心下降后反过来改变 HMD 高度。
+            var head = VROrigin!.WorldTransform.InverseTransformPosition(HeadCollision.WorldLocation);
+            var bodyLocal = VROrigin.WorldTransform.InverseTransformPosition(body.WorldLocation);
+            double dx = head.X - bodyLocal.X, dy = head.Y - bodyLocal.Y;
+            double radiusSum = CapsuleRadius + HeadCollision.ScaledSphereRadius;
+            double horizontalSquared = dx * dx + dy * dy;
+            // 胶囊顶端是半球：两球心间距为半径之和时才真正相切。
+            double top = head.Z - Math.Sqrt(Math.Max(radiusSum * radiusSum - horizontalSquared, 0)) + CapsuleRadius;
+            halfHeight = Math.Max(CapsuleRadius, (float)(top - CapsuleSubHeight) * 0.5f);
+        }
+        float change = halfHeight - oldHalfHeight;
+        if (Math.Abs(change) > 0.25f)
+        {
+            var target = ActorLocation + new FVector(0, 0, change);
+            // Keep the feet fixed while crouching; reject growth into a low ceiling.
+            bool blocked = change > 0 && SystemLibrary.CapsuleTraceByProfile(
+                target, target + new FVector(0, 0, 0.01), Math.Max(CapsuleRadius - Skin, 1),
+                Math.Max(halfHeight - Skin, CapsuleRadius), body.CollisionProfileName,
+                false, MovementIgnoredActors, EDrawDebugTrace.None, out _, true);
+            if (!blocked)
+            {
+                if (change < 0) body.SetCapsuleSize(CapsuleRadius, halfHeight);
+                SetActorLocation(target, false, out _, true);
+                if (change > 0) body.SetCapsuleSize(CapsuleRadius, halfHeight);
+            }
+        }
+        VROrigin!.SetRelativeLocation(VROrigin.RelativeLocation with
+        {
+            Z = -body.ScaledCapsuleHalfHeight - CapsuleSubHeight + stepVisualOffset
+        }, false, out _, false);
 
         // 根据身高设置速度
         MaxSpeed = MathLibrary.MapRangeClamped(
@@ -304,5 +359,158 @@ public partial class AVRSharpPlayer : APawn
             ClimbMoveSpeed,  // 输出范围的起点 (最低速度)
             MaxMoveSpeed     // 输出范围的终点 (最高速度)
         ).ToFloat();
+    }
+
+    [UProperty(PropertyFlags.EditAnywhere | PropertyFlags.BlueprintReadWrite), Category("VRMovementSettings|Ground")]
+    public partial float MaxStepHeight { get; set; }
+    [UProperty(PropertyFlags.EditAnywhere | PropertyFlags.BlueprintReadWrite), Category("VRMovementSettings|Ground")]
+    public partial float WalkableSlopeAngle { get; set; }
+    [UProperty(PropertyFlags.EditAnywhere | PropertyFlags.BlueprintReadWrite), Category("VRMovementSettings|Ground")]
+    public partial float GroundProbeDistance { get; set; }
+    [UProperty(PropertyFlags.EditAnywhere | PropertyFlags.BlueprintReadWrite), Category("VRMovementSettings")]
+    public partial float MovementResponse { get; set; }
+    [UProperty(PropertyFlags.EditAnywhere | PropertyFlags.BlueprintReadWrite), Category("VRMovementSettings")]
+    public partial float AirControl { get; set; }
+    [UProperty(PropertyFlags.EditAnywhere | PropertyFlags.BlueprintReadWrite), Category("VRMovementSettings|Ground")]
+    public partial float StepSmoothingSpeed { get; set; }
+
+    private FVector previousHeadLocation;
+    private bool hasHeadLocation;
+
+    private void ConstrainHeadCollision()
+    {
+        var desired = HeadCollision!.WorldLocation;
+        // Child collision shapes do not participate in the root capsule's movement sweep.
+        // Sweep the tracked head explicitly so a low beam cannot be bypassed by the HMD.
+        if (hasHeadLocation && HeadCollision.IsQueryCollisionEnabled()
+            && SystemLibrary.SphereTraceByProfile(previousHeadLocation, desired,
+                HeadCollision.ScaledSphereRadius, HeadCollision.CollisionProfileName, false,
+                MovementIgnoredActors, EDrawDebugTrace.None, out var hit, true)
+            && !hit.StartPenetrating)
+        {
+            VROrigin!.AddWorldOffset(hit.Location - desired, false, out _, false);
+        }
+        previousHeadLocation = HeadCollision.WorldLocation;
+        hasHeadLocation = true;
+    }
+
+    private const float Skin = 0.5f;
+    private double stepVisualOffset;
+    private bool wasGrounded;
+    private List<AActor>? movementIgnoredActors;
+    private List<AActor> MovementIgnoredActors => movementIgnoredActors ??= [this, LeftHand!, RightHand!];
+    private double WalkableNormalZ => Math.Cos(Math.Clamp(WalkableSlopeAngle, 0, 75) * Math.PI / 180);
+
+    // Shared input entry for XR, desktop controls and scripted movement.
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public void SetMovementInput(FVector axes)
+    {
+        axes.Z = 0;
+        inputVelocity = axes.LengthSquared() > 1 ? MathLibrary.Normal(axes) : axes;
+    }
+
+    private bool SweepBody(FVector start, FVector end, out FHitResult hit)
+    {
+        var body = BodyCapsule!;
+        return SystemLibrary.CapsuleTraceByProfile(start, end,
+            Math.Max(body.ScaledCapsuleRadius - Skin, 1),
+            Math.Max(body.ScaledCapsuleHalfHeight - Skin, body.ScaledCapsuleRadius),
+            body.CollisionProfileName, false, MovementIgnoredActors, EDrawDebugTrace.None, out hit, true);
+    }
+
+    private bool FindGround(float distance, out FHitResult hit) =>
+        SweepBody(ActorLocation + new FVector(0, 0, 2), ActorLocation - new FVector(0, 0, distance), out hit)
+        && !hit.StartPenetrating && hit.ImpactNormal.Z >= WalkableNormalZ;
+
+    private void MovementUpdate(float deltaSeconds)
+    {
+        if (deltaSeconds <= 0 || !float.IsFinite(deltaSeconds)) return;
+        var body = BodyCapsule!;
+        var velocity = body.GetPhysicsLinearVelocity();
+        var grounded = FindGround(Math.Max(GroundProbeDistance, 2), out var floor)
+            && FVector.Dot(velocity, floor.ImpactNormal) < 80;
+
+        // Follow small drops only from a supported state, never during a jump or fall.
+        if (!grounded && wasGrounded && velocity.Z <= 0 && MaxStepHeight > 0
+            && FindGround(MaxStepHeight, out var lowerFloor))
+        {
+            MoveGroundedBody(lowerFloor.Location + new FVector(0, 0, Skin));
+            grounded = true;
+            floor = lowerFloor;
+        }
+
+        var forward = MathLibrary.Normal(Camera!.ForwardVector with { Z = 0 });
+        if (forward.LengthSquared() < 0.5) forward = MathLibrary.Normal(ActorForwardVector with { Z = 0 });
+        var right = new FVector(-forward.Y, forward.X, 0);
+        var direction = forward * inputVelocity.Y + right * inputVelocity.X;
+        double amount = Math.Min(Math.Sqrt(direction.LengthSquared()), 1);
+        var horizontal = amount > 0.001 ? MathLibrary.Normal(direction) : FVector.Zero;
+
+        if (grounded && amount > 0.001 && MaxStepHeight > 0)
+        {
+            TryStepUp(horizontal, Math.Max(Math.Sqrt((velocity with { Z = 0 }).LengthSquared()), 30) * deltaSeconds);
+            grounded = FindGround(Math.Max(GroundProbeDistance, 2), out floor);
+            velocity = body.GetPhysicsLinearVelocity();
+        }
+
+        var normal = grounded ? floor.ImpactNormal : new FVector(0, 0, 1);
+        var tangent = direction - FVector.Dot(direction, normal) * normal;
+        CurrentVelocity = MathLibrary.Normal(tangent) * Math.Max(MaxSpeed, 0) * amount;
+        // Preserve the normal component: gravity, jumping and hand pull still work.
+        var error = CurrentVelocity - velocity;
+        error -= FVector.Dot(error, normal) * normal;
+        double response = Math.Max(MovementResponse, 0) * (grounded ? 1 : Math.Clamp(AirControl, 0, 1));
+        var impulse = error * (1 - Math.Exp(-response * deltaSeconds));
+        double limit = Math.Max(AccelerationSpeed, 0) * deltaSeconds * (grounded ? 1 : Math.Clamp(AirControl, 0, 1));
+        if (impulse.LengthSquared() > limit * limit) impulse = MathLibrary.Normal(impulse) * limit;
+        body.AddImpulse(impulse, velChange: true);
+        wasGrounded = grounded;
+    }
+
+    private void TryStepUp(FVector direction, double travel)
+    {
+        var start = ActorLocation;
+        if (!SweepBody(start, start + direction * (travel + Skin), out var obstacle)
+            || obstacle.StartPenetrating || obstacle.ImpactNormal.Z >= WalkableNormalZ) return;
+
+        var up = new FVector(0, 0, MaxStepHeight + 2 * Skin);
+        if (SweepBody(start, start + up, out _)) return;
+        // Advance beyond the rounded capsule edge so the centre has real support.
+        var advance = direction * (travel + BodyCapsule!.ScaledCapsuleRadius + 2 * Skin);
+        var raised = start + up;
+        if (SweepBody(raised, raised + advance, out _)) return;
+        if (!SweepBody(raised + advance, start + advance - new FVector(0, 0, 2), out var landing)
+            || landing.StartPenetrating || landing.ImpactNormal.Z < WalkableNormalZ) return;
+        double rise = landing.Location.Z + Skin - start.Z;
+        if (rise <= Skin || rise > MaxStepHeight + Skin) return;
+
+        var foot = landing.Location - new FVector(0, 0, BodyCapsule.ScaledCapsuleHalfHeight - Skin);
+        if (!SystemLibrary.LineTraceByProfile(foot + new FVector(0, 0, 3), foot - new FVector(0, 0, 3),
+            BodyCapsule.CollisionProfileName, false, MovementIgnoredActors, EDrawDebugTrace.None,
+            out var support, true) || support.ImpactNormal.Z < WalkableNormalZ) return;
+
+        var velocity = BodyCapsule.GetPhysicsLinearVelocity();
+        // Preflight all three legs, then sweep the actual body; never teleport through a wall.
+        SetActorLocation(raised, true, out var upHit, true);
+        if (upHit.BlockingHit) { SetActorLocation(start, false, out _, true); return; }
+        SetActorLocation(raised + advance, true, out var forwardHit, true);
+        if (forwardHit.BlockingHit) { SetActorLocation(start, false, out _, true); return; }
+        SetActorLocation(landing.Location + new FVector(0, 0, Skin), true, out _, true);
+        BodyCapsule.SetPhysicsLinearVelocity(velocity with { Z = Math.Max(velocity.Z, 0) });
+        ApplyStepVisualOffset(ActorLocation.Z - start.Z);
+    }
+
+    private void MoveGroundedBody(FVector destination)
+    {
+        var previous = ActorLocation;
+        SetActorLocation(destination, true, out _, true);
+        ApplyStepVisualOffset(ActorLocation.Z - previous.Z);
+    }
+
+    private void ApplyStepVisualOffset(double rise)
+    {
+        stepVisualOffset = Math.Clamp(stepVisualOffset - rise, -Math.Max(MaxStepHeight, 0), Math.Max(MaxStepHeight, 0));
+        VROrigin!.SetRelativeLocation(VROrigin.RelativeLocation with
+        { Z = -BodyCapsule!.ScaledCapsuleHalfHeight - CapsuleSubHeight + stepVisualOffset }, false, out _, false);
     }
 }
