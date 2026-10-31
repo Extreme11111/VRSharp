@@ -1,0 +1,26 @@
+name: Standalone math and LFS checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: math-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  math-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Check LFS assets
+        run: git lfs fsck
+      - name: Run production-linked math checks
+        run: bash Tools/cloud/run-checks.sh

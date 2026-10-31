@@ -1,4 +1,4 @@
-# VRSharp
+﻿# VRSharp
 
 A physical VR framework plugin for Unreal Engine, with C# gameplay through UnrealSharp.
 
@@ -41,3 +41,7 @@ dotnet run --project Tools/FingerContactChecks/FingerContactChecks.csproj --conf
 ## Documentation
 
 Original framework documentation: http://space-art.net/vrsharp/index.html
+
+## Continuous cloud development
+
+See [Docs/Continuous-Improvement.md](Docs/Continuous-Improvement.md) and [AGENTS.md](AGENTS.md) for priorities, validation limits and unattended-work rules. Binary assets are tracked with Git LFS; install Git LFS before cloning or run `git lfs pull` after checkout. GitHub Actions validates standalone math and LFS downloads; it does not by itself schedule AI development.
