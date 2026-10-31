@@ -24,3 +24,15 @@ jobs:
         run: git lfs fsck
       - name: Run production-linked math checks
         run: bash Tools/cloud/run-checks.sh
+  cloud-repository-access:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - name: Verify cloud Git and LFS round trip
+        run: bash Tools/cloud/probe-repository-access.sh
