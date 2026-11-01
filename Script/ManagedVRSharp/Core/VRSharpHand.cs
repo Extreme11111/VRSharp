@@ -642,7 +642,15 @@ public partial class AVRSharpHand : AActor
         if (grabbable is not null && SystemLibrary.IsValid(grabbable))
             grabbable.CallOnBeforeRelease();
 
-        grabbable?.Detach(this);
+        // 回调可能销毁原对象，不能仅用 CLR null 判断原生对象生命周期。
+        if (grabbable is not null && SystemLibrary.IsValid(grabbable))
+            grabbable.Detach(this);
+        else
+        {
+            DetachFromActor(EDetachmentRule.KeepWorld, EDetachmentRule.KeepWorld, EDetachmentRule.KeepWorld);
+            IsGrabbing = false;
+            GrabbedObject = null;
+        }
 
         // 松开抓握时，手指回到张开（空手时再按原有输入逻辑调整）
         SetAllAnimationWeights(0f);
