@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Script/ManagedVRSharp/Core/VRSharpMathHelper.cs" Link="VRSharpMathHelper.cs" />
+    <Compile Include="../../Script/ManagedVRSharp/Core/VRSharpMovementMath.cs" Link="VRSharpMovementMath.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
