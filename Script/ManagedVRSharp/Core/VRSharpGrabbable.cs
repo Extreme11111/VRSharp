@@ -65,6 +65,13 @@ public partial class UVRSharpGrabbable : UActorComponent
     public UPrimitiveComponent? GrabbedComponent { get; private set; }
     public int GrabCount => hands.Count;
 
+    /// <summary>当前手实际抓住的组件；不使用其他手的共享缓存。</summary>
+    public UPrimitiveComponent? GetGrabbedComponent(AVRSharpHand hand)
+    {
+        return components.TryGetValue(hand, out var component) && SystemLibrary.IsValid(component)
+            ? component : null;
+    }
+
     /// <summary>
     /// 获取 Owner 上所有的 UMeshComponent（包括 StaticMesh 和 SkeletalMesh）
     /// </summary>
