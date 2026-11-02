@@ -26,6 +26,7 @@ public partial class UVRSharpGrabbable : UActorComponent
 
     public bool CanGrab(AVRSharpHand hand)
     {
+        if (hand is null || !SystemLibrary.IsValid(hand)) return false;
         return GrabAdmission.Allows(DisableGrabbing, DisableLeftHand, DisableRightHand,
             SingleHandOnly, hand.IsLeft, hands.Count, hands.Contains(hand));
     }
