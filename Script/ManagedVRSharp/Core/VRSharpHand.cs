@@ -256,7 +256,7 @@ public partial class AVRSharpHand : AActor
         hasTrackingTarget = true;
 
         // Weld 后手组件不再拥有独立刚体，必须读取并驱动被抓物体的物理岛。
-        var rigidbody = IsGrabbing && GrabbedObject?.GrabbedComponent is { } grabbedBody ? grabbedBody : body;
+        var rigidbody = IsGrabbing && GrabbedObject?.GetGrabbedComponent(this) is { } grabbedBody ? grabbedBody : body;
         var angularVelocity = rigidbody.GetPhysicsAngularVelocityInRadians();
         var angularAcceleration = VRSharpMathHelper.ComputeSpringAcceleration(
             VRSharpMathHelper.RotationVector(targetRotation, body.WorldRotation),
@@ -395,7 +395,7 @@ public partial class AVRSharpHand : AActor
     /// </summary>
     private void UpdateGrabAnimation(float deltaSeconds)
     {
-        if (HandMesh is null || GrabbedObject?.GrabbedComponent is not { } component) return;
+        if (HandMesh is null || GrabbedObject?.GetGrabbedComponent(this) is not { } component) return;
         targetThumbWeight = VRSharpMathHelper.StepFingerContactTarget(ThumbWeight, targetThumbWeight,
             FingerContactDistance(ThumbName, component), FingerRadius, deltaSeconds);
         targetIndexWeight = VRSharpMathHelper.StepFingerContactTarget(IndexWeight, targetIndexWeight,
