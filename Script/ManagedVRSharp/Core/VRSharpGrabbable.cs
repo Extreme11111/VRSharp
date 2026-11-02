@@ -26,8 +26,8 @@ public partial class UVRSharpGrabbable : UActorComponent
 
     public bool CanGrab(AVRSharpHand hand)
     {
-        return !DisableGrabbing && !(hand.IsLeft ? DisableLeftHand : DisableRightHand)
-            && (!SingleHandOnly || hands.Count == 0 || hands.Contains(hand));
+        return GrabAdmission.Allows(DisableGrabbing, DisableLeftHand, DisableRightHand,
+            SingleHandOnly, hand.IsLeft, hands.Count, hands.Contains(hand));
     }
 
     #region 抓握姿态
