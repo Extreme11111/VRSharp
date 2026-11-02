@@ -534,7 +534,7 @@ public partial class AVRSharpHand : AActor
     {
         if (component is null || !SystemLibrary.IsValid(component) || component.Owner == this) return null;
         foreach (var item in component.Owner.GetComponentsByClass<UActorComponent>())
-            if (item is UVRSharpGrabbable grabbable && SystemLibrary.IsValid(grabbable)) return grabbable;
+            if (item is UVRSharpGrabbable grabbable && SystemLibrary.IsValid(grabbable) && grabbable.CanGrab(this)) return grabbable;
         return null;
     }
 
@@ -580,9 +580,11 @@ public partial class AVRSharpHand : AActor
     /// <param name="component"></param>
     private void Grab(UVRSharpGrabbable grabbable, FVector location, FVector normal, UPrimitiveComponent component)
     {
+        if (!grabbable.CanGrab(this)) return;
         // 事件
         OnBeforeGrab?.Invoke(grabbable);
         grabbable.CallOnBeforeGrab();
+        if (!SystemLibrary.IsValid(grabbable) || !grabbable.CanGrab(this)) return;
 
         // 检查是否有预定义的手部姿态
         var componentName = SystemLibrary.GetObjectName(component);
