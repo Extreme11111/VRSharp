@@ -2,6 +2,7 @@ using UnrealSharp;
 using UnrealSharp.Attributes;
 using UnrealSharp.CoreUObject;
 using UnrealSharp.Engine;
+using UnrealSharp.EnhancedInput;
 
 namespace VRSharp.Core;
 
@@ -23,6 +24,75 @@ public partial class AVRSharpDesktopTestPawn : APawn
     public partial AVRSharpHand? RightHand { get; set; }
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial bool ControlLeftHand { get; set; }
+
+
+    private UEnhancedInputComponent? boundDesktopInput;
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? DesktopMove { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? DesktopLook { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? DesktopHandMove { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? DesktopGrip { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? DesktopSwitchHand { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? DesktopTrigger { get; set; }
+
+    // Call after possession; Tick also retries until EnhancedInputComponent exists.
+    public bool BindDesktopInput(UEnhancedInputComponent input)
+    {
+        if (boundDesktopInput is not null) return boundDesktopInput == input;
+        if (DesktopMove is null || DesktopLook is null || DesktopHandMove is null ||
+            DesktopGrip is null || DesktopSwitchHand is null || DesktopTrigger is null) return false;
+        input.BindAction(DesktopMove, ETriggerEvent.Triggered, OnDesktopMove);
+        input.BindAction(DesktopMove, ETriggerEvent.Completed, OnDesktopMoveStop);
+        input.BindAction(DesktopMove, ETriggerEvent.Canceled, OnDesktopMoveStop);
+        input.BindAction(DesktopLook, ETriggerEvent.Triggered, OnDesktopLook);
+        input.BindAction(DesktopHandMove, ETriggerEvent.Triggered, OnDesktopHandMove);
+        input.BindAction(DesktopHandMove, ETriggerEvent.Completed, OnDesktopHandMoveStop);
+        input.BindAction(DesktopHandMove, ETriggerEvent.Canceled, OnDesktopHandMoveStop);
+        input.BindAction(DesktopTrigger, ETriggerEvent.Triggered, OnDesktopTrigger);
+        input.BindAction(DesktopTrigger, ETriggerEvent.Completed, OnDesktopTriggerStop);
+        input.BindAction(DesktopTrigger, ETriggerEvent.Canceled, OnDesktopTriggerStop);
+        input.BindAction(DesktopGrip, ETriggerEvent.Started, OnDesktopGrab);
+        input.BindAction(DesktopGrip, ETriggerEvent.Completed, OnDesktopRelease);
+        input.BindAction(DesktopGrip, ETriggerEvent.Canceled, OnDesktopRelease);
+        input.BindAction(DesktopSwitchHand, ETriggerEvent.Started, OnDesktopSwitch);
+        boundDesktopInput = input;
+        return true;
+    }
+    [UFunction]
+    private void OnDesktopMove(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    { var v=value.GetAxis3D(); SetMoveInput((float)v.X,(float)v.Y,(float)v.Z); }
+    [UFunction]
+    private void OnDesktopMoveStop(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    { SetMoveInput(0,0,0); }
+    [UFunction]
+    private void OnDesktopLook(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    { var v=value.GetAxis3D(); Look((float)v.X,(float)v.Y); }
+    [UFunction]
+    private void OnDesktopHandMove(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    { var v=value.GetAxis3D(); SetHandMoveInput((float)v.X,(float)v.Y,(float)v.Z); }
+    [UFunction]
+    private void OnDesktopHandMoveStop(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    { SetHandMoveInput(0,0,0); }
+    [UFunction]
+    private void OnDesktopTrigger(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    { SetTrigger((float)value.GetAxis3D().X); }
+    [UFunction]
+    private void OnDesktopTriggerStop(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    { SetTrigger(0); }
+    [UFunction]
+    private void OnDesktopGrab(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    { GrabActiveHand(); }
+    [UFunction]
+    private void OnDesktopRelease(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    { ReleaseActiveHand(); }
+    [UFunction]
+    private void OnDesktopSwitch(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    { SelectLeftHand(!ControlLeftHand); }
 
     private FVector moveInput, handInput;
     private float yaw, pitch;
@@ -88,6 +158,7 @@ public partial class AVRSharpDesktopTestPawn : APawn
     public override void Tick(float deltaSeconds)
     {
         base.Tick(deltaSeconds);
+        if (boundDesktopInput is null && InputComponent is UEnhancedInputComponent input) BindDesktopInput(input);
         if (!float.IsFinite(deltaSeconds) || deltaSeconds <= 0) return;
         float dt = Math.Min(deltaSeconds,.1f);
         var movement = VRSharpMathHelper.ClampMagnitude(moveInput,1);
