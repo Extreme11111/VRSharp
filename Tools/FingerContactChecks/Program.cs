@@ -29,3 +29,11 @@ foreach(float weight in new[]{-1f,0f,.5f,1f,2f,float.NaN,float.PositiveInfinity,
  Check(VRSharpMathHelper.NormalizePoseWeight(weight)==expected,"authored pose normalization");
 }
 Console.WriteLine("Authored pose weight boundaries passed.");
+
+Check(VRSharpMathHelper.BlendPoseWeight(.2f,.8f,0)==.2f,"trigger starts at base");
+Check(VRSharpMathHelper.BlendPoseWeight(.2f,.8f,1)==.8f,"trigger ends at authored endpoint");
+Check(Math.Abs(VRSharpMathHelper.BlendPoseWeight(.2f,.8f,.5f)-.5f)<1e-6,"trigger midpoint");
+Check(VRSharpMathHelper.BlendPoseWeight(0,1,-1)==0,"negative trigger clamps");
+Check(VRSharpMathHelper.BlendPoseWeight(0,1,2)==1,"high trigger clamps");
+Check(VRSharpMathHelper.BlendPoseWeight(float.NaN,1,float.NaN)==0,"invalid blend remains finite");
+Console.WriteLine("Authored trigger blend boundaries passed.");
