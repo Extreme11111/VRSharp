@@ -27,6 +27,8 @@ public partial class AVRSharpDesktopTestPawn : APawn
 
 
     private UEnhancedInputComponent? boundDesktopInput;
+    private AVRSharpHand? gripInputHand;
+    private UVRSharpGrabbable? gripInputObject;
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial UInputAction? DesktopMove { get; set; }
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
@@ -86,13 +88,36 @@ public partial class AVRSharpDesktopTestPawn : APawn
     { SetTrigger(0); }
     [UFunction]
     private void OnDesktopGrab(FInputActionValue value, float elapsed, float triggered, UInputAction action)
-    { GrabActiveHand(); }
+    {
+        if (gripInputHand is not null) return;
+        var hand = ActiveHand;
+        if (hand is not null && SystemLibrary.IsValid(hand) && hand.TryGrab())
+        {
+            gripInputHand = hand;
+            gripInputObject = hand.GrabbedObject;
+        }
+    }
     [UFunction]
     private void OnDesktopRelease(FInputActionValue value, float elapsed, float triggered, UInputAction action)
-    { ReleaseActiveHand(); }
+    { ReleaseDesktopGrip(); }
     [UFunction]
     private void OnDesktopSwitch(FInputActionValue value, float elapsed, float triggered, UInputAction action)
     { SelectLeftHand(!ControlLeftHand); }
+
+
+    private void ReleaseDesktopGrip()
+    {
+        var hand = gripInputHand;
+        var item = gripInputObject;
+        gripInputHand = null;
+        gripInputObject = null;
+        if (hand is not null && SystemLibrary.IsValid(hand) && item is not null &&
+            hand.IsGrabbing && hand.GrabbedObject == item)
+        {
+            hand.SetGrabTrigger(0);
+            hand.Release();
+        }
+    }
 
     private FVector moveInput, handInput;
     private float yaw, pitch;
@@ -143,6 +168,7 @@ public partial class AVRSharpDesktopTestPawn : APawn
     [UFunction(FunctionFlags.BlueprintCallable)]
     public void ResetDesktopInput()
     {
+        ReleaseDesktopGrip();
         moveInput = handInput = FVector.Zero;
         trigger = 0;
         if (LeftHand is { } left && SystemLibrary.IsValid(left)) left.SetGrabTrigger(0);
