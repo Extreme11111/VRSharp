@@ -5,3 +5,5 @@
 UE5.7/UnrealSharp0.1宿主生成Glue并编译。在/VRSharp/Maps/VRSharpDemo测试副本，通过临时UMG三滑条或OpenXR轴值每帧调用每手SetFingerInput；使用该入口时不要同时驱动原Touched/Clicked动画回调，否则同帧后写入者覆盖前者。姿态跟随可使用现有UpdateTracking，抓放使用TryGrab/Release，输入映射需本地建立，未修改原资产。
 
 验收：0/.5/1连续输入平滑驱动对应拇指/食指/三指；越界钳制；NaN/Infinity不污染目标；抓取时调用返回false且接触动画继续；释放后可重新驱动。左右手分别测试，保存蓝图重开确认节点可用。正常旧输入绑定应保持。UE编译、蓝图、PIE和头显均待执行；独立测试仅覆盖数值归一化。
+
+- 2026-11-03 输入所有权更新（5db78bd）：成功SetFingerInput后，旧Touched/Clicked/Released动画回调不再覆盖外部目标；新增BlueprintCallable ClearFingerInput，在适配器断开、UI关闭或切换回旧输入时调用。空手清零目标；抓取中仅解除外部所有权，保留接触姿势。不主动释放物体，也不自动检测设备断开。此规则取代此前“同帧后写入者覆盖”的接线警告。待UE验收：外部输入后触发全部旧动画事件，目标应保持；Clear后空手张开且旧输入事件恢复；抓取中Clear不改变接触姿势；连续Clear幂等；左右手所有权独立。完整UE编译/PIE/头显与此状态切换路径未验证，数值测试不能替代。
