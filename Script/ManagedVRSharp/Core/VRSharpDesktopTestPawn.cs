@@ -102,6 +102,6 @@ public partial class AVRSharpDesktopTestPawn : APawn
     private static void Drive(AVRSharpHand? hand,USceneComponent? target,float dt)
     {
         if (hand is null || target is null || !SystemLibrary.IsValid(hand) || !SystemLibrary.IsValid(target)) return;
-        hand.UpdateTracking(target.WorldLocation,target.WorldRotation.Quaternion(),dt);
+        hand.UpdateTracking(target.WorldLocation,target.WorldRotation,dt);
     }
 }
