@@ -88,6 +88,7 @@ public partial class AVRSharpHand : AActor
     private float targetGraspWeight;
     private float targetIndexWeight;
     private float targetThumbWeight;
+    private bool useAuthoredFingerWeights;
 
     #endregion
 
@@ -207,7 +208,7 @@ public partial class AVRSharpHand : AActor
 
         if (IsGrabbing)
         {
-            UpdateGrabAnimation(deltaSeconds);
+            if (!useAuthoredFingerWeights) UpdateGrabAnimation(deltaSeconds);
             UpdateAnimationWeights(deltaSeconds, 0.20f);
         }
         else
@@ -621,7 +622,14 @@ public partial class AVRSharpHand : AActor
             SetActorLocation(ActorLocation - (Palm!.WorldLocation - location));
         }
 
-        SetAllAnimationWeights(1f);
+        useAuthoredFingerWeights = handPose is not null && handPose.UseFingerWeights;
+        if (useAuthoredFingerWeights)
+        {
+            targetThumbWeight = VRSharpMathHelper.NormalizePoseWeight(handPose!.ThumbWeight);
+            targetIndexWeight = VRSharpMathHelper.NormalizePoseWeight(handPose.IndexWeight);
+            targetGraspWeight = VRSharpMathHelper.NormalizePoseWeight(handPose.GraspWeight);
+        }
+        else SetAllAnimationWeights(1f);
         grabbable.Attach(this, component);
 
         // 事件
@@ -645,6 +653,7 @@ public partial class AVRSharpHand : AActor
         grabbable?.Detach(this);
 
         // 松开抓握时，手指回到张开（空手时再按原有输入逻辑调整）
+        useAuthoredFingerWeights = false;
         SetAllAnimationWeights(0f);
 
         OnAfterRelease?.Invoke(grabbable);
