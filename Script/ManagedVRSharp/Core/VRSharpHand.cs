@@ -89,6 +89,8 @@ public partial class AVRSharpHand : AActor
     private float targetIndexWeight;
     private float targetThumbWeight;
     private bool useAuthoredFingerWeights;
+    private bool useTriggerBlend;
+    private float authoredIndexWeight, triggerIndexWeight;
 
     #endregion
 
@@ -623,10 +625,12 @@ public partial class AVRSharpHand : AActor
         }
 
         useAuthoredFingerWeights = handPose is not null && handPose.UseFingerWeights;
+        useTriggerBlend = useAuthoredFingerWeights && handPose!.UseTriggerBlend;
         if (useAuthoredFingerWeights)
         {
             targetThumbWeight = VRSharpMathHelper.NormalizePoseWeight(handPose!.ThumbWeight);
-            targetIndexWeight = VRSharpMathHelper.NormalizePoseWeight(handPose.IndexWeight);
+            authoredIndexWeight = targetIndexWeight = VRSharpMathHelper.NormalizePoseWeight(handPose.IndexWeight);
+            triggerIndexWeight = VRSharpMathHelper.NormalizePoseWeight(handPose.TriggerIndexWeight);
             targetGraspWeight = VRSharpMathHelper.NormalizePoseWeight(handPose.GraspWeight);
         }
         else SetAllAnimationWeights(1f);
@@ -654,6 +658,7 @@ public partial class AVRSharpHand : AActor
 
         // 松开抓握时，手指回到张开（空手时再按原有输入逻辑调整）
         useAuthoredFingerWeights = false;
+        useTriggerBlend = false;
         SetAllAnimationWeights(0f);
 
         OnAfterRelease?.Invoke(grabbable);
@@ -706,6 +711,15 @@ public partial class AVRSharpHand : AActor
             targetHitResults.Add(nearest);
         }
         else targetHitResults.Clear();
+    }
+
+    /// <summary>已抓取预设姿势的食指扳机混合；无配置或异常样本返回false。</summary>
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool SetGrabTrigger(float value)
+    {
+        if (!IsGrabbing || !useTriggerBlend || !float.IsFinite(value)) return false;
+        targetIndexWeight = VRSharpMathHelper.BlendPoseWeight(authoredIndexWeight, triggerIndexWeight, value);
+        return true;
     }
 
     private void SetAllAnimationWeights(float weight)
