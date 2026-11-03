@@ -4,6 +4,9 @@ namespace VRSharp.Core;
 
 public static class VRSharpMathHelper
 {
+    public static float BlendPoseWeight(float start, float end, float alpha)
+        => float.Lerp(NormalizePoseWeight(start), NormalizePoseWeight(end), NormalizePoseWeight(alpha));
+
     public static float NormalizePoseWeight(float weight)
         => float.IsFinite(weight) ? Math.Clamp(weight, 0f, 1f) : 0f;
 
