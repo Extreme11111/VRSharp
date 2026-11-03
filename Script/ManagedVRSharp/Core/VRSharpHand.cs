@@ -699,6 +699,18 @@ public partial class AVRSharpHand : AActor
         else targetHitResults.Clear();
     }
 
+
+    /// <summary>空手模拟输入入口；PC滑条与OpenXR模拟轴共用。抓取接触期间返回false。</summary>
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool SetFingerInput(float thumb, float index, float grasp)
+    {
+        if (IsGrabbing) return false;
+        targetThumbWeight = FingerInput.Normalize(thumb, targetThumbWeight);
+        targetIndexWeight = FingerInput.Normalize(index, targetIndexWeight);
+        targetGraspWeight = FingerInput.Normalize(grasp, targetGraspWeight);
+        return true;
+    }
+
     private void SetAllAnimationWeights(float weight)
     {
         targetGraspWeight = weight;
