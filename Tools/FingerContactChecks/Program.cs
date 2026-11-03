@@ -23,3 +23,9 @@ foreach(float initial in new[]{0f,1f}) {
  Console.WriteLine($"{fps} Hz, initial {initial}: final={current:F5}, distance/R={ratio:F5}, tail swing={max-min:F6}");
 }
 Console.WriteLine("Finger contact production helper: all checks passed");
+
+foreach(float weight in new[]{-1f,0f,.5f,1f,2f,float.NaN,float.PositiveInfinity,float.NegativeInfinity}) {
+ float expected=float.IsFinite(weight)?Math.Clamp(weight,0,1):0;
+ Check(VRSharpMathHelper.NormalizePoseWeight(weight)==expected,"authored pose normalization");
+}
+Console.WriteLine("Authored pose weight boundaries passed.");
