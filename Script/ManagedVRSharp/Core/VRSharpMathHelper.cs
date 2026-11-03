@@ -4,6 +4,9 @@ namespace VRSharp.Core;
 
 public static class VRSharpMathHelper
 {
+    public static float NormalizePoseWeight(float weight)
+        => float.IsFinite(weight) ? Math.Clamp(weight, 0f, 1f) : 0f;
+
     /// <summary>
     /// 将连续弹簧的极点映射到当前物理时间步。输出为加速度增益，与刚体质量无关。
     /// 配合每帧一次的速度冲量使用；物理子步只处理漂移与碰撞，不重复施加反馈。
