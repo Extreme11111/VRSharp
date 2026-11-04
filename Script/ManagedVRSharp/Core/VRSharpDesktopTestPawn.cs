@@ -158,6 +158,24 @@ public partial class AVRSharpDesktopTestPawn : APawn
     public void SetHandRotateInput(float yawAxis, float pitchAxis, float rollAxis)
         => handRotateInput = new FVector(Axis(yawAxis),Axis(pitchAxis),Axis(rollAxis));
 
+    private FVector initialLeftLocation, initialRightLocation;
+    private FRotator initialLeftRotation, initialRightRotation;
+    private bool targetsCaptured;
+
+    // Restore authored camera-local targets without releasing either held object.
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool ResetHandTargets()
+    {
+        if (!targetsCaptured || LeftTarget is null || RightTarget is null ||
+            !SystemLibrary.IsValid(LeftTarget) || !SystemLibrary.IsValid(RightTarget)) return false;
+        handInput = handRotateInput = FVector.Zero;
+        LeftTarget.RelativeLocation = initialLeftLocation;
+        LeftTarget.RelativeRotation = initialLeftRotation;
+        RightTarget.RelativeLocation = initialRightLocation;
+        RightTarget.RelativeRotation = initialRightRotation;
+        return true;
+    }
+
     private FVector moveInput, handInput, handRotateInput;
     public float HandRotateSpeed { get; set; } = 90f;
     private float yaw, pitch;
@@ -217,6 +235,15 @@ public partial class AVRSharpDesktopTestPawn : APawn
     public override void BeginPlay()
     {
         base.BeginPlay();
+        if (LeftTarget is not null && RightTarget is not null &&
+            SystemLibrary.IsValid(LeftTarget) && SystemLibrary.IsValid(RightTarget))
+        {
+            initialLeftLocation = LeftTarget.RelativeLocation;
+            initialRightLocation = RightTarget.RelativeLocation;
+            initialLeftRotation = LeftTarget.RelativeRotation;
+            initialRightRotation = RightTarget.RelativeRotation;
+            targetsCaptured = true;
+        }
         // Initialize physics only; never request XR tracking or bind VR input actions.
         if (LeftHand is { } left && SystemLibrary.IsValid(left)) left.InitializeHand(true);
         if (RightHand is { } right && SystemLibrary.IsValid(right)) right.InitializeHand(false);
