@@ -40,6 +40,14 @@ public partial class UVRSharpGrabbable : UActorComponent
 
     #region  抓握事件
 
+    public event Action<AVRSharpHand, UVRSharpGrabbable, UPrimitiveComponent, float>? GrabTriggerChanged;
+
+    internal void NotifyGrabTrigger(AVRSharpHand hand, UPrimitiveComponent component, float value)
+    {
+        if (!float.IsFinite(value) || !IsHeldBy(hand) || GetHeldComponent(hand) != component) return;
+        GrabTriggerChanged?.Invoke(hand, this, component, value);
+    }
+
     public event Action<UVRSharpGrabbable?>? OnBeforeGrab;
     public event Action<UVRSharpGrabbable?>? OnAfterGrab;
     public event Action<UVRSharpGrabbable?>? OnBeforeRelease;
