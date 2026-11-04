@@ -26,6 +26,8 @@ public partial class AVRSharpDesktopTestPawn : APawn
     public partial bool ControlLeftHand { get; set; }
 
 
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? DesktopHandRotate { get; set; }
     private UEnhancedInputComponent? boundDesktopInput;
     private AVRSharpHand? gripInputHand;
     private UVRSharpGrabbable? gripInputObject;
@@ -62,6 +64,12 @@ public partial class AVRSharpDesktopTestPawn : APawn
         input.BindAction(DesktopGrip, ETriggerEvent.Completed, OnDesktopRelease);
         input.BindAction(DesktopGrip, ETriggerEvent.Canceled, OnDesktopRelease);
         input.BindAction(DesktopSwitchHand, ETriggerEvent.Started, OnDesktopSwitch);
+        if (DesktopHandRotate is not null)
+        {
+            input.BindAction(DesktopHandRotate, ETriggerEvent.Triggered, OnDesktopHandRotate);
+            input.BindAction(DesktopHandRotate, ETriggerEvent.Completed, OnDesktopHandRotateStop);
+            input.BindAction(DesktopHandRotate, ETriggerEvent.Canceled, OnDesktopHandRotateStop);
+        }
         boundDesktopInput = input;
         return true;
     }
@@ -119,7 +127,18 @@ public partial class AVRSharpDesktopTestPawn : APawn
         }
     }
 
-    private FVector moveInput, handInput;
+    [UFunction]
+    private void OnDesktopHandRotate(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    { var v=value.GetAxis3D(); SetHandRotateInput((float)v.X,(float)v.Y,(float)v.Z); }
+    [UFunction]
+    private void OnDesktopHandRotateStop(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    { SetHandRotateInput(0,0,0); }
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public void SetHandRotateInput(float yawAxis, float pitchAxis, float rollAxis)
+        => handRotateInput = new FVector(Axis(yawAxis),Axis(pitchAxis),Axis(rollAxis));
+
+    private FVector moveInput, handInput, handRotateInput;
+    public float HandRotateSpeed { get; set; } = 90f;
     private float yaw, pitch;
     private float trigger;
     public float MoveSpeed { get; set; } = 250f;
@@ -148,7 +167,7 @@ public partial class AVRSharpDesktopTestPawn : APawn
     {
         if (ActiveHand is { } old && SystemLibrary.IsValid(old)) old.SetGrabTrigger(0);
         trigger = 0;
-        handInput = FVector.Zero;
+        handInput = handRotateInput = FVector.Zero;
         ControlLeftHand = left;
     }
     [UFunction(FunctionFlags.BlueprintCallable)]
@@ -169,7 +188,7 @@ public partial class AVRSharpDesktopTestPawn : APawn
     public void ResetDesktopInput()
     {
         ReleaseDesktopGrip();
-        moveInput = handInput = FVector.Zero;
+        moveInput = handInput = handRotateInput = FVector.Zero;
         trigger = 0;
         if (LeftHand is { } left && SystemLibrary.IsValid(left)) left.SetGrabTrigger(0);
         if (RightHand is { } right && SystemLibrary.IsValid(right)) right.SetGrabTrigger(0);
@@ -190,8 +209,15 @@ public partial class AVRSharpDesktopTestPawn : APawn
         var movement = VRSharpMathHelper.ClampMagnitude(moveInput,1);
         SetActorLocation(ActorLocation + (ActorForwardVector*movement.X + ActorRightVector*movement.Y
             + new FVector(0,0,movement.Z))*Math.Max(MoveSpeed,0)*dt);
-        if (ActiveTarget is { } target)
+        if (ActiveTarget is { } target && SystemLibrary.IsValid(target))
+        {
             target.RelativeLocation += VRSharpMathHelper.ClampMagnitude(handInput,1)*Math.Max(HandSpeed,0)*dt;
+            var axes = VRSharpMathHelper.ClampMagnitude(handRotateInput,1);
+            var rotation = target.RelativeRotation;
+            float step = float.IsFinite(HandRotateSpeed) ? Math.Max(HandRotateSpeed,0)*dt : 0;
+            target.RelativeRotation = new FRotator((rotation.Pitch + axes.Y*step)%360,
+                (rotation.Yaw + axes.X*step)%360, (rotation.Roll + axes.Z*step)%360);
+        }
         Drive(LeftHand,LeftTarget,dt);
         Drive(RightHand,RightTarget,dt);
         if (ActiveHand is { } active && SystemLibrary.IsValid(active)) active.SetGrabTrigger(trigger);
