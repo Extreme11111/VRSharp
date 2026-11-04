@@ -94,3 +94,7 @@ void HandleReleased(AVRSharpHand hand, UVRSharpGrabbable item, UPrimitiveCompone
 ## PR #8 桌面锁存抓握（2026-11-04）
 VRSharpDesktopTestPawn.cs新增DesktopToggleGrip和ToggleActiveGrip。创建Bool输入动作IA_DesktopToggleGrip，映射E键，在Pawn默认值赋给DesktopToggleGrip（首次绑定前）。Started切换当前手抓放；不绑定Completed，因此松键仍持物，可切到另一手抓取。旧按住Grip模式保留；同一次测试避免混用两种动作。切手后分别再次按E释放各手；抓取失败返回false，不产生持有状态。ResetDesktopInput只释放旧按住输入拥有的抓握，锁存抓握需显式ReleaseActiveHand释放。
 验收：右手E抓取→松E→切左手→E抓取→两手保持→E只放左手→切右手E释放。空目标E返回false；再次接近物体可重试。独立数学和既有方法测试不能证明此新增输入路由；完整UE编译/PIE/头显未验证。
+
+## PR #8 桌面目标复位（2026-11-05）
+VRSharpDesktopTestPawn.ResetHandTargets保存BeginPlay时左右目标的相机局部位置/旋转，调用后恢复两手目标并清除平移/旋转轴。蓝图在桌面Pawn添加Home键Started→ResetHandTargets；无需XR。先设置LeftTarget/RightTarget的默认局部变换再开始游戏。未初始化或目标失效返回false。复位不放下物体、不清扳机，也不瞬移物理手；原跟随逻辑把手带向恢复后的目标，因此抓着物体时谨慎测试碰撞。
+验收：平移/旋转双手后按Home，两目标应回初始变换；再次输入仍可移动；锁存持物保持。抽取方法测试仅验证可调用/缺目标拒绝，不覆盖原生变换赋值、跟随物理；完整UE编译/PIE/头显待验。
