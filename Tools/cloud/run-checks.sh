@@ -9,3 +9,5 @@ python3 Tools/check_desktop_grip.py
 python3 Tools/check_grab_state.py
 
 dotnet run --project Tools/GrabAdmissionChecks/GrabAdmissionChecks.csproj --configuration Release
+
+python3 Tools/check_pose_selection.py

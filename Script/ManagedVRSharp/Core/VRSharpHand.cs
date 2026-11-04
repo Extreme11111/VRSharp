@@ -603,6 +603,29 @@ public partial class AVRSharpHand : AActor
     /// <param name="location"></param>
     /// <param name="normal"></param>
     /// <param name="component"></param>
+    private UVRSharpHandPose? FindExplicitGrabPose(UVRSharpGrabbable grabbable, UPrimitiveComponent component)
+    {
+        UVRSharpHandPose? best = null;
+        double bestDistance = double.PositiveInfinity;
+        var candidates = grabbable.Owner?.GetComponentsByClass<USceneComponent>();
+        if (candidates is null) return null;
+        foreach (var candidate in candidates.OfType<UVRSharpHandPose>())
+        {
+            if (!SystemLibrary.IsValid(candidate) || candidate.TargetComponent != component ||
+                (IsLeft ? candidate.DisableLeftHand : candidate.DisableRightHand)) continue;
+            var distance = FVector.DistanceSquared(Palm!.WorldLocation, candidate.WorldLocation);
+            if (!double.IsFinite(distance)) continue;
+            if (best is null || candidate.Priority > best.Priority ||
+                (candidate.Priority == best.Priority && (distance < bestDistance ||
+                 (distance == bestDistance && string.CompareOrdinal(SystemLibrary.GetObjectName(candidate), SystemLibrary.GetObjectName(best)) < 0))))
+            {
+                best = candidate;
+                bestDistance = distance;
+            }
+        }
+        return best;
+    }
+
     private bool Grab(UVRSharpGrabbable grabbable, FVector location, FVector normal, UPrimitiveComponent component)
     {
         if (!SystemLibrary.IsValid(grabbable) || !SystemLibrary.IsValid(component) || !grabbable.CanGrab(this)) return false;
@@ -614,9 +637,9 @@ public partial class AVRSharpHand : AActor
 
         // 检查是否有预定义的手部姿态
         var componentName = SystemLibrary.GetObjectName(component);
-        UVRSharpHandPose? handPose = null;
+        UVRSharpHandPose? handPose = FindExplicitGrabPose(grabbable, component);
 
-        if (grabbable.GrabPoses is not null)
+        if (handPose is null && grabbable.GrabPoses is not null)
         {
             // 使用 Contains 匹配：只要组件名包含字典中的 key 就匹配
             var matchedKey = grabbable.GrabPoses.Keys.FirstOrDefault(key => componentName.Contains(key));

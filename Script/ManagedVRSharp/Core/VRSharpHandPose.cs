@@ -6,6 +6,12 @@ namespace VRSharp.Core;
 [UClass]
 public partial class UVRSharpHandPose : USceneComponent
 {
+    // Explicit collider association takes precedence over legacy name mappings.
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UPrimitiveComponent? TargetComponent { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial int Priority { get; set; }
+
     // Optional animation graph state key; empty retains existing finger animation.
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial string? AnimationKey { get; set; }

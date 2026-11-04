@@ -83,3 +83,10 @@ void HandleReleased(AVRSharpHand hand, UVRSharpGrabbable item, UPrimitiveCompone
 - 2026-11-04 手侧接口组：AVRSharpHand新增Grabbed/Released C#事件，签名同物体事件(hand,item,component)。Grabbable在实际Attach/Detach完成状态变更后先通知手、再通知物体；重复/失败动作仍不通知。GetCurrentGrabComponent提供蓝图/C#按手查询；弹簧与指尖反馈改为该查询，避免另一手先抓组件的共享缓存误用（覆盖PR3相同用途，不直接覆写旧分支）。C#可 hand.Grabbed += handler / hand.Released += handler，EndPlay配对退订；旧OnBefore/After API保留。不能在同步通知内递归抓放同一对象。UE组合验收：两手抓同Actor不同Primitive，事件回调读取手/物体状态应一致，分别驱动各自Primitive，释放一手不改变另一手查询，最后释放返回null。完整UE编译、PIE与原生组件生命周期仍待执行；隔离测试仅检查生产物体方法调用手通知桥接时的状态，不编译完整手类或实际物理。
 
 - 2026-11-04 桌面六自由度操作：新增可选DesktopHandRotate Axis3D动作，X/Y/Z对应yaw/pitch/roll，SetHandRotateInput供C#/蓝图模拟，默认角速度90度/秒。Triggered持续输入，Completed/Canceled归零，切手和Reset清理旋转输入，非活动手保持自己的目标变换。旋转在相机局部空间以受限dt积分，混合轴归一化。UE侧在BindDesktopInput第一次成功前赋动作；可映射R/F、T/G、Y/H三组正负轴（Negate/Swizzle，与Axis3D移动相同做法），不赋值时保留旧控制。不自动改输入资产。验收每轴单独转动、组合转动、切手停止旧轴、失焦停止旋转、抓物旋转与专用抓点对齐、30/60/120Hz角速度对比。新增原生旋转路径尚未经过UE编译/PIE验证；现有独立测试不覆盖FRotator及实际手目标变换。已定义的自由飞行限制继续适用。
+
+## PR #8 — 显式特殊抓点与选择规则（2026-11-04）
+代码：Core/VRSharpHandPose.cs 的 TargetComponent / Priority；Core/VRSharpHand.cs 的 FindExplicitGrabPose。关联提交见 PR #8 本节所在提交。
+在待抓Actor蓝图添加多个 VRSharpHandPose 场景组件，各自 TargetComponent 选择同Actor的目标 Primitive（例如 StaticMesh），移动/旋转抓点到手掌期望位置。为左右手分别勾选 DisableRightHand / DisableLeftHand。Priority 越大越优先；相同时按抓取前 Palm 世界位置选择最近点，完全同距按组件名序稳定选择。无有效显式候选时才使用既有 GrabPoses 名称映射；未赋 TargetComponent 的旧资源不变。非有限位置的候选被忽略。
+每点继续配置 AnimationKey、UseFingerWeights、UseTriggerBlend 等既有字段；动画蓝图通过 GetActiveGrabPose 读取 AnimationKey，通过 GetGrabPoseTrigger 驱动既有专用动画状态，进入/保持/退出接线见前文。本轮没有制作动画资产。
+本地验收：编译生成C#绑定并打开蓝图，确认组件引用可保存/重开；同一物体放两个同优先级抓点，用桌面双手目标分别靠近它们，抓取应各选近点；提高远点Priority应选远点；禁用该手后应跳过；两个Primitive的点不得串用；清空所有显式引用应恢复旧映射。放下、切手、重新抓取后姿势生命周期与事件仍应一致。
+已验证仅生产选择方法抽取的托管测试（原生组件/向量为替身）及独立数学检查；完整UE编译、组件引用序列化、PIE、真实对齐和头显未验证，不代表完整特殊姿势系统已验收。
