@@ -143,6 +143,19 @@ public partial class AVRSharpHand : AActor
 
     #endregion
 
+
+    public event Action<AVRSharpHand, UVRSharpGrabbable, UPrimitiveComponent>? Grabbed;
+    public event Action<AVRSharpHand, UVRSharpGrabbable, UPrimitiveComponent>? Released;
+    internal void NotifyGrabbed(UVRSharpGrabbable item, UPrimitiveComponent component)
+        => Grabbed?.Invoke(this, item, component);
+    internal void NotifyReleased(UVRSharpGrabbable item, UPrimitiveComponent component)
+        => Released?.Invoke(this, item, component);
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public UPrimitiveComponent? GetCurrentGrabComponent()
+        => IsGrabbing && GrabbedObject is { } item && SystemLibrary.IsValid(item)
+            ? item.GetHeldComponent(this) : null;
+
     #region  抓握事件
 
     public event Action<UVRSharpGrabbable?>? OnBeforeGrab;
@@ -269,7 +282,7 @@ public partial class AVRSharpHand : AActor
         hasTrackingTarget = true;
 
         // Weld 后手组件不再拥有独立刚体，必须读取并驱动被抓物体的物理岛。
-        var rigidbody = IsGrabbing && GrabbedObject?.GrabbedComponent is { } grabbedBody ? grabbedBody : body;
+        var rigidbody = IsGrabbing && GetCurrentGrabComponent() is { } grabbedBody ? grabbedBody : body;
         var angularVelocity = rigidbody.GetPhysicsAngularVelocityInRadians();
         var angularAcceleration = VRSharpMathHelper.ComputeSpringAcceleration(
             VRSharpMathHelper.RotationVector(targetRotation, body.WorldRotation),
@@ -408,7 +421,7 @@ public partial class AVRSharpHand : AActor
     /// </summary>
     private void UpdateGrabAnimation(float deltaSeconds)
     {
-        if (HandMesh is null || GrabbedObject?.GrabbedComponent is not { } component) return;
+        if (HandMesh is null || GetCurrentGrabComponent() is not { } component) return;
         targetThumbWeight = VRSharpMathHelper.StepFingerContactTarget(ThumbWeight, targetThumbWeight,
             FingerContactDistance(ThumbName, component), FingerRadius, deltaSeconds);
         targetIndexWeight = VRSharpMathHelper.StepFingerContactTarget(IndexWeight, targetIndexWeight,
