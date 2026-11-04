@@ -19,6 +19,7 @@ class AVRSharpHand {
 }
 class Rig {
  public AVRSharpHand? ActiveHand;
+ private float trigger;
  private AVRSharpHand? gripInputHand;
  private UVRSharpGrabbable? gripInputObject;
  public void Press()
@@ -36,6 +37,13 @@ class Program {
  Check(b.Releases==0);
  r.ActiveHand=a;r.Press();a.Release();a.TryGrab();int before=a.Releases;r.Cancel();
  Check(a.Releases==before&&a.IsGrabbing);
+ var left=new AVRSharpHand();var right=new AVRSharpHand();var latch=new Rig{ActiveHand=left};
+ Check(latch.ToggleActiveGrip()&&left.IsGrabbing);latch.Cancel();Check(left.IsGrabbing);
+ latch.ActiveHand=right;Check(latch.ToggleActiveGrip()&&right.IsGrabbing&&left.IsGrabbing);
+ Check(latch.ToggleActiveGrip()&&!right.IsGrabbing&&left.IsGrabbing);
+ latch.ActiveHand=left;Check(latch.ToggleActiveGrip()&&!left.IsGrabbing);
+ latch.ActiveHand=failed;Check(!latch.ToggleActiveGrip());latch.ActiveHand=null;Check(!latch.ToggleActiveGrip());
+ Console.WriteLine("Latched desktop grip: independent two-hand holding, release and rejected requests passed.");
  Console.WriteLine("Desktop grip subset: hand switching, duplicate/cancel, rejected press and replacement object passed.");
  }
 }
@@ -43,5 +51,5 @@ class Program {
 with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-grip-") as d:
  p=Path(d)
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>')
- (p/"Program.cs").write_text(code+body("private void OnDesktopGrab(")+" public void Cancel() "+body("private void ReleaseDesktopGrip(")+tests)
+ (p/"Program.cs").write_text(code+body("private void OnDesktopGrab(")+" public void Cancel() "+body("private void ReleaseDesktopGrip(")+" public bool ToggleActiveGrip() "+body("public bool ToggleActiveGrip()")+tests)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
