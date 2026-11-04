@@ -12,7 +12,7 @@ code="""using System;
 struct FVector {public static FVector Zero=>new();}
 struct FRotator {}
 class Target {public FVector RelativeLocation;public FRotator RelativeRotation;}
-class UVRSharpGrabbable {}
+class UVRSharpGrabbable {public int TriggerNotifications; public void NotifyGrabTrigger(object h,object c,float v){TriggerNotifications++;}}
 static class SystemLibrary {public static bool IsValid(object x)=>x!=null;}
 class AVRSharpHand {
  public bool IsGrabbing,CanGrab=true;public UVRSharpGrabbable? GrabbedObject;public int Releases;
@@ -65,7 +65,7 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-grip-") as d:
 # Production held-trigger method; native validity/component access are doubles.
 src=(root/"Script/ManagedVRSharp/Core/VRSharpHand.cs").read_text()
 trigger_code='''using System;
-class UVRSharpGrabbable {}
+class UVRSharpGrabbable {public int TriggerNotifications; public void NotifyGrabTrigger(object h,object c,float v){TriggerNotifications++;}}
 class UPrimitiveComponent {}
 static class SystemLibrary {public static bool IsValid(object x)=>x!=null;}
 static class VRSharpMathHelper {public static float BlendPoseWeight(float a,float b,float t)=>a+(b-a)*t;}
@@ -82,7 +82,7 @@ trigger_tests='''}
 class Program {static void Check(bool b){if(!b)throw new Exception("held trigger");}
 static void Main(){var r=new Rig();int count=0;float last=0;
 r.GrabTriggerChanged+=(h,i,c,v)=>{Check(h==r&&i==r.GrabbedObject&&c==r.Component);count++;last=v;};
-Check(r.SetGrabTrigger(.5f)&&count==1&&last==.5f);Check(r.SetGrabTrigger(.5f)&&count==1);
+Check(r.SetGrabTrigger(.5f)&&count==1&&last==.5f&&r.GrabbedObject.TriggerNotifications==1);Check(r.SetGrabTrigger(.5f)&&count==1);
 Check(!r.SetGrabTrigger(float.NaN)&&count==1);Check(r.SetGrabTrigger(2)&&last==1);
 Check(r.SetGrabTrigger(0)&&last==0&&count==3);r.Component=null;Check(!r.SetGrabTrigger(1));
 r.IsGrabbing=false;Check(!r.SetGrabTrigger(1));Console.WriteLine("Held trigger production subset: changed events, context, clamping and rejected input passed.");}}
