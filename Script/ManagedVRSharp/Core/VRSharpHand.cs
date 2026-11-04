@@ -88,6 +88,16 @@ public partial class AVRSharpHand : AActor
     private float targetGraspWeight;
     private float targetIndexWeight;
     private float targetThumbWeight;
+    private UVRSharpHandPose? activeGrabPose;
+    private float activePoseTrigger;
+    public event Action<AVRSharpHand, UVRSharpHandPose>? GrabPoseEntered;
+    public event Action<AVRSharpHand, UVRSharpHandPose>? GrabPoseExited;
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public UVRSharpHandPose? GetActiveGrabPose()
+        => activeGrabPose is not null && SystemLibrary.IsValid(activeGrabPose) ? activeGrabPose : null;
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public float GetGrabPoseTrigger() => activePoseTrigger;
+
     private bool useAuthoredFingerWeights;
     private bool useTriggerBlend;
     private float authoredIndexWeight, triggerIndexWeight;
@@ -603,7 +613,7 @@ public partial class AVRSharpHand : AActor
                 var poseComponents = allComponents?.OfType<UVRSharpHandPose>().ToList();
 
                 // 使用 Contains 匹配 HandPose 组件名称
-                handPose = poseComponents?.FirstOrDefault(p => SystemLibrary.GetObjectName(p).Contains(poseName));
+                handPose = poseComponents?.FirstOrDefault(p => SystemLibrary.IsValid(p) && !(IsLeft ? p.DisableLeftHand : p.DisableRightHand) && SystemLibrary.GetObjectName(p).Contains(poseName));
             }
         }
 
@@ -635,6 +645,12 @@ public partial class AVRSharpHand : AActor
         }
         else SetAllAnimationWeights(1f);
         grabbable.Attach(this, component);
+        if (IsGrabbing && GrabbedObject == grabbable)
+        {
+            activeGrabPose = handPose;
+            activePoseTrigger = 0;
+            if (handPose is not null) GrabPoseEntered?.Invoke(this, handPose);
+        }
 
         // 事件
         OnAfterGrab?.Invoke(grabbable);
@@ -657,9 +673,13 @@ public partial class AVRSharpHand : AActor
         grabbable?.Detach(this);
 
         // 松开抓握时，手指回到张开（空手时再按原有输入逻辑调整）
+        var exitedPose = activeGrabPose;
+        activeGrabPose = null;
+        activePoseTrigger = 0;
         useAuthoredFingerWeights = false;
         useTriggerBlend = false;
         SetAllAnimationWeights(0f);
+        if (exitedPose is not null) GrabPoseExited?.Invoke(this, exitedPose);
 
         OnAfterRelease?.Invoke(grabbable);
         if (grabbable is not null && SystemLibrary.IsValid(grabbable))
@@ -717,8 +737,9 @@ public partial class AVRSharpHand : AActor
     [UFunction(FunctionFlags.BlueprintCallable)]
     public bool SetGrabTrigger(float value)
     {
-        if (!IsGrabbing || !useTriggerBlend || !float.IsFinite(value)) return false;
-        targetIndexWeight = VRSharpMathHelper.BlendPoseWeight(authoredIndexWeight, triggerIndexWeight, value);
+        if (!IsGrabbing || GetActiveGrabPose() is null || !float.IsFinite(value)) return false;
+        activePoseTrigger = Math.Clamp(value,0,1);
+        if (useTriggerBlend) targetIndexWeight = VRSharpMathHelper.BlendPoseWeight(authoredIndexWeight, triggerIndexWeight, activePoseTrigger);
         return true;
     }
 
