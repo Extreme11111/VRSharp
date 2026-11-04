@@ -14,6 +14,9 @@ enum EAttachmentRule {KeepWorld} enum EDetachmentRule {KeepWorld}
 class UPrimitiveComponent {public bool Valid=true;}
 static class SystemLibrary {public static bool IsValid(object o)=>o is UPrimitiveComponent c?c.Valid:o!=null;}
 class AVRSharpHand {
+ public int GrabNotices,ReleaseNotices;
+ public void NotifyGrabbed(UVRSharpGrabbable g,UPrimitiveComponent c){if(!IsGrabbing||GrabbedObject!=g)throw new Exception();GrabNotices++;}
+ public void NotifyReleased(UVRSharpGrabbable g,UPrimitiveComponent c){if(IsGrabbing||GrabbedObject!=null)throw new Exception();ReleaseNotices++;}
  public bool IsGrabbing,Success=true; public UVRSharpGrabbable? GrabbedObject;
  public int Attaches,Detaches;
  public bool AttachToComponent(UPrimitiveComponent c,string s,EAttachmentRule a,EAttachmentRule b,EAttachmentRule d,bool w){Attaches++;return Success;}
@@ -38,6 +41,7 @@ class Program {
  Check(g.IsGrabbed&&g.GrabCount==1&&left==1&&snapshot.Length==2&&b.IsGrabbing);
  g.Detach(b);Check(!g.IsGrabbed&&g.GrabCount==0&&left==2&&entered==2);
  Check(b.Attaches>1&&b.Detaches>0);
+ Check(a.GrabNotices==1&&b.GrabNotices==1&&a.ReleaseNotices==1&&b.ReleaseNotices==1);
  c.Valid=false;g.Attach(a,c);Check(entered==2);
  Console.WriteLine("Production grab subset: contextual events, state, failed/duplicate attachment and dual-hand release passed.");
  }
