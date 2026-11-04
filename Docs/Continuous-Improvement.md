@@ -78,3 +78,5 @@ Validation of this combined tree: both math projects, authored pose/trigger boun
 - 2026-11-04: Integrated admission configuration into desktop/pose/events branch; resolved native hand validity + policy guard together and retained pose entry only after successful registration. Updated event harness with explicit admission double to test rejection before registration; policy combinations are tested separately against production GrabAdmission. Full UE/PIE still pending.
 
 Combined math, pose/trigger, desktop grip, event state and 192 admission policy checks all passed; native bindings and actual integration remain UE handoff work.
+
+- 2026-11-04 手侧接口组：AVRSharpHand新增Grabbed/Released C#事件，签名同物体事件(hand,item,component)。Grabbable在实际Attach/Detach完成状态变更后先通知手、再通知物体；重复/失败动作仍不通知。GetCurrentGrabComponent提供蓝图/C#按手查询；弹簧与指尖反馈改为该查询，避免另一手先抓组件的共享缓存误用（覆盖PR3相同用途，不直接覆写旧分支）。C#可 hand.Grabbed += handler / hand.Released += handler，EndPlay配对退订；旧OnBefore/After API保留。不能在同步通知内递归抓放同一对象。UE组合验收：两手抓同Actor不同Primitive，事件回调读取手/物体状态应一致，分别驱动各自Primitive，释放一手不改变另一手查询，最后释放返回null。完整UE编译、PIE与原生组件生命周期仍待执行；隔离测试仅检查生产物体方法调用手通知桥接时的状态，不编译完整手类或实际物理。
