@@ -86,3 +86,5 @@ Combined math, pose/trigger, desktop grip, event state and 192 admission policy 
 - 2026-11-04 PR #8：特殊姿势抓点新增显式TargetComponent与Priority，按手别、优先级、距离、稳定名称顺序选择，找不到时保留旧GrabPoses回退。生产选择方法的托管抽取测试覆盖错误组件/手别、多个点、优先级、距离、同距顺序和无候选；原生类型用替身，不是UE编译。新增具体蓝图配置和组合验收至LocalUEHandover。未制作资产、未运行PIE/头显；未合并main。GitHub文本API写权限与LFS上传权限分别记录，后者仍未证明。
 
 - 2026-11-04 PR #8新增桌面锁存抓握动作及程序入口，可单键盘先后抓取并保持双手，旧按住抓握保留。具体输入资产、双手验收及重置语义见LocalUEHandover。新增路由尚待UE编译/PIE；LFS上传授权仍未证明，不改二进制。
+
+- 2026-11-05 PR #8：新增桌面双手目标复位入口，恢复BeginPlay作者配置的局部变换并清理控制轴，保持持物状态；Home接线及物理跟随验收写入LocalUEHandover。上一提交CI通过，无评论。新增方法托管替身检查及两个数学检查通过；原生变换和UE编译/PIE未验证。LFS上传权限仍未证明。
