@@ -9,6 +9,9 @@ def body(signature):
   depth+=(src[end]=="{")-(src[end]=="}");end+=1
  return src[i:end]
 code="""using System;
+struct FVector {public static FVector Zero=>new();}
+struct FRotator {}
+class Target {public FVector RelativeLocation;public FRotator RelativeRotation;}
 class UVRSharpGrabbable {}
 static class SystemLibrary {public static bool IsValid(object x)=>x!=null;}
 class AVRSharpHand {
@@ -20,6 +23,10 @@ class AVRSharpHand {
 class Rig {
  public AVRSharpHand? ActiveHand;
  private float trigger;
+ private bool targetsCaptured=true;
+ private FVector handInput,handRotateInput,initialLeftLocation,initialRightLocation;
+ private FRotator initialLeftRotation,initialRightRotation;
+ public Target? LeftTarget=new(),RightTarget=new();
  private AVRSharpHand? gripInputHand;
  private UVRSharpGrabbable? gripInputObject;
  public void Press()
@@ -37,6 +44,7 @@ class Program {
  Check(b.Releases==0);
  r.ActiveHand=a;r.Press();a.Release();a.TryGrab();int before=a.Releases;r.Cancel();
  Check(a.Releases==before&&a.IsGrabbing);
+ Check(r.ResetHandTargets());r.LeftTarget=null;Check(!r.ResetHandTargets());
  var left=new AVRSharpHand();var right=new AVRSharpHand();var latch=new Rig{ActiveHand=left};
  Check(latch.ToggleActiveGrip()&&left.IsGrabbing);latch.Cancel();Check(left.IsGrabbing);
  latch.ActiveHand=right;Check(latch.ToggleActiveGrip()&&right.IsGrabbing&&left.IsGrabbing);
@@ -51,5 +59,5 @@ class Program {
 with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-grip-") as d:
  p=Path(d)
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>')
- (p/"Program.cs").write_text(code+body("private void OnDesktopGrab(")+" public void Cancel() "+body("private void ReleaseDesktopGrip(")+" public bool ToggleActiveGrip() "+body("public bool ToggleActiveGrip()")+tests)
+ (p/"Program.cs").write_text(code+body("private void OnDesktopGrab(")+" public void Cancel() "+body("private void ReleaseDesktopGrip(")+" public bool ToggleActiveGrip() "+body("public bool ToggleActiveGrip()")+" public bool ResetHandTargets() "+body("public bool ResetHandTargets()")+tests)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
