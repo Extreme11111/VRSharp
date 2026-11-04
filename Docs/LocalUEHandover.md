@@ -103,3 +103,8 @@ VRSharpDesktopTestPawn.ResetHandTargets保存BeginPlay时左右目标的相机�
 Core/VRSharpHand.cs新增C# GrabTriggerChanged(hand,item,primitive,value)，业务组件在BeginPlay订阅手、EndPlay退订。SetGrabTrigger现在适用于普通持物及特殊姿势；仅有效持物、有效组件、有限输入成功，归一到0..1，变化后更新状态/动画再通知，重复值不通知。Release在before-release回调前发送归零（原值非零时）；事件内不可递归抓放。GetGrabPoseTrigger兼容保留，普通物体同样可读。
 例如处理器按item和primitive筛选自己的工具，value>=0.8开启工具，value<=0.2关闭；Released也必须作为业务停止兜底（物体销毁不保证扳机通知）。桌面DesktopTrigger沿用现有动作；OpenXR在既有Trigger输入回调调用SetGrabTrigger，Completed/Canceled传0。无需动画资产即可驱动业务事件；配置专用姿势时仍驱动现有动画混合。
 本地验收：普通物体及特殊姿势分别按压/松开，事件上下文正确且重复相同值不重发；按住扳机放下先归零再Released；双手只通知输入对应手；空手不通知。生产方法托管抽取测试通过，原生类型为替身；完整UE编译、PIE、业务/动画实际接线与头显均未验证。
+
+## PR #8 物体侧持物扳机事件（2026-11-05）
+Core/VRSharpGrabbable.cs新增GrabTriggerChanged(hand,item,primitive,value)，对象业务C#组件直接在BeginPlay订阅自己的Grabbable，EndPlay退订，不必逐一查找左右手。手侧更新状态/动画后先通知手，再通知物体；物体通知会再次核对IsHeldBy/GetHeldComponent，手侧回调已改变持有关系时不向旧物体发送。回调中仍不要递归抓放。放下归零语义沿用上一节。
+示例：grabbable.GrabTriggerChanged += OnToolTrigger；OnToolTrigger按primitive区分把手或按钮，记录每只手value；双手工具在Released时清除对应手记录，工具是否启动按产品逻辑决定。该事件为C#事件，不是已生成的Blueprint动态委托；蓝图业务需本地增加C#转发组件后接线。
+验收：桌面和XR分别抓取同一工具，只有该工具收到变化；双手上下文各自正确；重复值不通知；正常放下归零；抓放后旧工具不再收到输入。托管手方法抽取测试验证桥接调用，未编译完整物体/手类；UE编译、PIE、实际工具示例资产及头显仍未验证。
