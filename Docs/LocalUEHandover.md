@@ -98,3 +98,8 @@ VRSharpDesktopTestPawn.cs新增DesktopToggleGrip和ToggleActiveGrip。创建Bool
 ## PR #8 桌面目标复位（2026-11-05）
 VRSharpDesktopTestPawn.ResetHandTargets保存BeginPlay时左右目标的相机局部位置/旋转，调用后恢复两手目标并清除平移/旋转轴。蓝图在桌面Pawn添加Home键Started→ResetHandTargets；无需XR。先设置LeftTarget/RightTarget的默认局部变换再开始游戏。未初始化或目标失效返回false。复位不放下物体、不清扳机，也不瞬移物理手；原跟随逻辑把手带向恢复后的目标，因此抓着物体时谨慎测试碰撞。
 验收：平移/旋转双手后按Home，两目标应回初始变换；再次输入仍可移动；锁存持物保持。抽取方法测试仅验证可调用/缺目标拒绝，不覆盖原生变换赋值、跟随物理；完整UE编译/PIE/头显待验。
+
+## PR #8 持物扳机业务事件（2026-11-05）
+Core/VRSharpHand.cs新增C# GrabTriggerChanged(hand,item,primitive,value)，业务组件在BeginPlay订阅手、EndPlay退订。SetGrabTrigger现在适用于普通持物及特殊姿势；仅有效持物、有效组件、有限输入成功，归一到0..1，变化后更新状态/动画再通知，重复值不通知。Release在before-release回调前发送归零（原值非零时）；事件内不可递归抓放。GetGrabPoseTrigger兼容保留，普通物体同样可读。
+例如处理器按item和primitive筛选自己的工具，value>=0.8开启工具，value<=0.2关闭；Released也必须作为业务停止兜底（物体销毁不保证扳机通知）。桌面DesktopTrigger沿用现有动作；OpenXR在既有Trigger输入回调调用SetGrabTrigger，Completed/Canceled传0。无需动画资产即可驱动业务事件；配置专用姿势时仍驱动现有动画混合。
+本地验收：普通物体及特殊姿势分别按压/松开，事件上下文正确且重复相同值不重发；按住扳机放下先归零再Released；双手只通知输入对应手；空手不通知。生产方法托管抽取测试通过，原生类型为替身；完整UE编译、PIE、业务/动画实际接线与头显均未验证。
