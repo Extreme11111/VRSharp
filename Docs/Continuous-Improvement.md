@@ -90,3 +90,5 @@ Combined math, pose/trigger, desktop grip, event state and 192 admission policy 
 - 2026-11-05 PR #8：新增桌面双手目标复位入口，恢复BeginPlay作者配置的局部变换并清理控制轴，保持持物状态；Home接线及物理跟随验收写入LocalUEHandover。上一提交CI通过，无评论。新增方法托管替身检查及两个数学检查通过；原生变换和UE编译/PIE未验证。LFS上传权限仍未证明。
 
 - 2026-11-05 PR #8：持物扳机扩展至普通Grabbable，新增带手/物体/Primitive/value的GrabTriggerChanged事件，仅变化的成功输入通知；放下前归零。生产方法抽取回归验证上下文、重复值、归一和拒绝；UE原生及释放整体顺序仍待本地验收。两个数学及现有组合检查通过，前一提交CI通过无反馈。文本写权限可用；LFS上传仍未证明。
+
+- 2026-11-05 PR #8：补齐Grabbable侧GrabTriggerChanged业务订阅入口，手侧通知后验证当前持有手/组件再通知物体；防止已变化的持有上下文转发到旧物体。生产手方法抽取回归增加物体桥接调用验证，未替代完整UE编译。交接包含订阅/退订、双手工具状态和验收。前一提交CI通过，无人工评论；LFS上传权限仍未证明。
