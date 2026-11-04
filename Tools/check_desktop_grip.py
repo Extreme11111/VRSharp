@@ -61,3 +61,34 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-grip-") as d:
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>')
  (p/"Program.cs").write_text(code+body("private void OnDesktopGrab(")+" public void Cancel() "+body("private void ReleaseDesktopGrip(")+" public bool ToggleActiveGrip() "+body("public bool ToggleActiveGrip()")+" public bool ResetHandTargets() "+body("public bool ResetHandTargets()")+tests)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
+
+# Production held-trigger method; native validity/component access are doubles.
+src=(root/"Script/ManagedVRSharp/Core/VRSharpHand.cs").read_text()
+trigger_code='''using System;
+class UVRSharpGrabbable {}
+class UPrimitiveComponent {}
+static class SystemLibrary {public static bool IsValid(object x)=>x!=null;}
+static class VRSharpMathHelper {public static float BlendPoseWeight(float a,float b,float t)=>a+(b-a)*t;}
+class Rig {
+public bool IsGrabbing=true; public UVRSharpGrabbable? GrabbedObject=new();
+public UPrimitiveComponent? Component=new();
+public UPrimitiveComponent? GetCurrentGrabComponent()=>Component;
+private float activePoseTrigger, targetIndexWeight, authoredIndexWeight, triggerIndexWeight;
+private bool useTriggerBlend;
+public event Action<Rig,UVRSharpGrabbable,UPrimitiveComponent,float>? GrabTriggerChanged;
+public bool SetGrabTrigger(float value)
+'''
+trigger_tests='''}
+class Program {static void Check(bool b){if(!b)throw new Exception("held trigger");}
+static void Main(){var r=new Rig();int count=0;float last=0;
+r.GrabTriggerChanged+=(h,i,c,v)=>{Check(h==r&&i==r.GrabbedObject&&c==r.Component);count++;last=v;};
+Check(r.SetGrabTrigger(.5f)&&count==1&&last==.5f);Check(r.SetGrabTrigger(.5f)&&count==1);
+Check(!r.SetGrabTrigger(float.NaN)&&count==1);Check(r.SetGrabTrigger(2)&&last==1);
+Check(r.SetGrabTrigger(0)&&last==0&&count==3);r.Component=null;Check(!r.SetGrabTrigger(1));
+r.IsGrabbing=false;Check(!r.SetGrabTrigger(1));Console.WriteLine("Held trigger production subset: changed events, context, clamping and rejected input passed.");}}
+'''
+with tempfile.TemporaryDirectory(prefix="vrsharp-held-trigger-") as d:
+ p=Path(d)
+ (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework></PropertyGroup></Project>')
+ (p/"Program.cs").write_text(trigger_code+body("public bool SetGrabTrigger(")+trigger_tests)
+ subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
