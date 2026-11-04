@@ -7,3 +7,5 @@ dotnet run --project Tools/FingerContactChecks/FingerContactChecks.csproj --conf
 python3 Tools/check_desktop_grip.py
 
 python3 Tools/check_grab_state.py
+
+dotnet run --project Tools/GrabAdmissionChecks/GrabAdmissionChecks.csproj --configuration Release

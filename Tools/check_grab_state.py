@@ -20,6 +20,7 @@ class AVRSharpHand {
  public void DetachFromActor(EDetachmentRule a,EDetachmentRule b,EDetachmentRule c){Detaches++;}
 }
 class UVRSharpGrabbable {
+ public bool AdmissionAllowed=true; public bool CanGrab(AVRSharpHand hand)=>AdmissionAllowed;
  private readonly List<AVRSharpHand> hands=new();
  private readonly Dictionary<AVRSharpHand,UPrimitiveComponent> components=new();
 """
@@ -30,6 +31,7 @@ class Program {
  var g=new UVRSharpGrabbable();var a=new AVRSharpHand();var b=new AVRSharpHand();var c=new UPrimitiveComponent();int entered=0,left=0;
  g.Grabbed+=(h,o,p)=>{Check(o==g&&p==c&&g.IsHeldBy(h)&&h.GrabbedObject==g);entered++;};
  g.Released+=(h,o,p)=>{Check(o==g&&p==c&&!g.IsHeldBy(h)&&!h.IsGrabbing);left++;};
+ g.AdmissionAllowed=false;g.Attach(a,c);Check(!g.IsGrabbed&&entered==0);g.AdmissionAllowed=true;
  Check(!g.IsGrabbed);a.Success=false;g.Attach(a,c);Check(!g.IsGrabbed&&entered==0);
  a.Success=true;g.Attach(a,c);g.Attach(a,c);Check(g.GrabCount==1&&entered==1);
  g.Attach(b,c);var snapshot=g.GetGrabbingHands();g.Detach(a);g.Detach(a);

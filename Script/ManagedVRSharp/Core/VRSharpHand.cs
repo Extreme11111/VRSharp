@@ -511,8 +511,7 @@ public partial class AVRSharpHand : AActor
     {
         if (IsGrabbing || !TrySelectGrabHit(hits, specificTarget, out var selected, out var grabbable))
             return false;
-        Grab(grabbable!, selected.ImpactPoint, selected.ImpactNormal, selected.Component.Object!);
-        return true;
+        return Grab(grabbable!, selected.ImpactPoint, selected.ImpactNormal, selected.Component.Object!);
     }
 
     // Use the actual collision surface and the same origin/range for highlight and grip.
@@ -547,7 +546,7 @@ public partial class AVRSharpHand : AActor
     {
         if (component is null || !SystemLibrary.IsValid(component) || component.Owner == this) return null;
         foreach (var item in component.Owner.GetComponentsByClass<UActorComponent>())
-            if (item is UVRSharpGrabbable grabbable && SystemLibrary.IsValid(grabbable)) return grabbable;
+            if (item is UVRSharpGrabbable grabbable && SystemLibrary.IsValid(grabbable) && grabbable.CanGrab(this)) return grabbable;
         return null;
     }
 
@@ -591,11 +590,14 @@ public partial class AVRSharpHand : AActor
     /// <param name="location"></param>
     /// <param name="normal"></param>
     /// <param name="component"></param>
-    private void Grab(UVRSharpGrabbable grabbable, FVector location, FVector normal, UPrimitiveComponent component)
+    private bool Grab(UVRSharpGrabbable grabbable, FVector location, FVector normal, UPrimitiveComponent component)
     {
+        if (!SystemLibrary.IsValid(grabbable) || !SystemLibrary.IsValid(component) || !grabbable.CanGrab(this)) return false;
         // 事件
         OnBeforeGrab?.Invoke(grabbable);
+        if (!SystemLibrary.IsValid(grabbable) || !SystemLibrary.IsValid(component) || !grabbable.CanGrab(this)) return false;
         grabbable.CallOnBeforeGrab();
+        if (!SystemLibrary.IsValid(grabbable) || !SystemLibrary.IsValid(component) || !grabbable.CanGrab(this)) return false;
 
         // 检查是否有预定义的手部姿态
         var componentName = SystemLibrary.GetObjectName(component);
@@ -645,6 +647,7 @@ public partial class AVRSharpHand : AActor
         }
         else SetAllAnimationWeights(1f);
         grabbable.Attach(this, component);
+        if (!IsGrabbing || GrabbedObject != grabbable) return false;
         if (IsGrabbing && GrabbedObject == grabbable)
         {
             activeGrabPose = handPose;
@@ -654,7 +657,8 @@ public partial class AVRSharpHand : AActor
 
         // 事件
         OnAfterGrab?.Invoke(grabbable);
-        grabbable.CallOnAfterGrab();
+        if (SystemLibrary.IsValid(grabbable)) grabbable.CallOnAfterGrab();
+        return true;
     }
 
     [UFunction(FunctionFlags.BlueprintCallable)]

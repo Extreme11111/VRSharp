@@ -13,6 +13,24 @@ public partial class UVRSharpGrabbable : UActorComponent
     private int highlightCount = 0;
     private bool isGrabbed = false;
 
+
+    // 默认均为 false，旧资产保持允许双手抓取的行为。
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial bool DisableGrabbing { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial bool DisableLeftHand { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial bool DisableRightHand { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial bool SingleHandOnly { get; set; }
+
+    public bool CanGrab(AVRSharpHand hand)
+    {
+        if (hand is null || !SystemLibrary.IsValid(hand)) return false;
+        return GrabAdmission.Allows(DisableGrabbing, DisableLeftHand, DisableRightHand,
+            SingleHandOnly, hand.IsLeft, hands.Count, hands.Contains(hand));
+    }
+
     #region 抓握姿态
 
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
@@ -158,7 +176,7 @@ public partial class UVRSharpGrabbable : UActorComponent
     /// </summary>
     public void Attach(AVRSharpHand hand, UPrimitiveComponent component)
     {
-        if (hand is null || !SystemLibrary.IsValid(hand) || component is null || !SystemLibrary.IsValid(component))
+        if (hand is null || !SystemLibrary.IsValid(hand) || component is null || !SystemLibrary.IsValid(component) || !CanGrab(hand))
             return;
 
         if (components.TryGetValue(hand, out var previous) && previous == component) return;
