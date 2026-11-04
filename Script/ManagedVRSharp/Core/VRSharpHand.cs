@@ -788,7 +788,11 @@ public partial class AVRSharpHand : AActor
         bool changed = next != activePoseTrigger;
         activePoseTrigger = next;
         if (useTriggerBlend) targetIndexWeight = VRSharpMathHelper.BlendPoseWeight(authoredIndexWeight, triggerIndexWeight, activePoseTrigger);
-        if (changed) GrabTriggerChanged?.Invoke(this, item, component, activePoseTrigger);
+        if (changed)
+        {
+            GrabTriggerChanged?.Invoke(this, item, component, activePoseTrigger);
+            if (SystemLibrary.IsValid(item)) item.NotifyGrabTrigger(this, component, activePoseTrigger);
+        }
         return true;
     }
 
