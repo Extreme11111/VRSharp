@@ -6,6 +6,14 @@ namespace VRSharp.Core;
 [UClass]
 public partial class UVRSharpHandPose : USceneComponent
 {
+    // Optional animation graph state key; empty retains existing finger animation.
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial string? AnimationKey { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial bool DisableLeftHand { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial bool DisableRightHand { get; set; }
+
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial bool UseFingerWeights { get; set; }
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
