@@ -84,3 +84,5 @@ Combined math, pose/trigger, desktop grip, event state and 192 admission policy 
 - 2026-11-04 桌面六自由度操作：新增可选DesktopHandRotate Axis3D动作，X/Y/Z对应yaw/pitch/roll，SetHandRotateInput供C#/蓝图模拟，默认角速度90度/秒。Triggered持续输入，Completed/Canceled归零，切手和Reset清理旋转输入，非活动手保持自己的目标变换。旋转在相机局部空间以受限dt积分，混合轴归一化。UE侧在BindDesktopInput第一次成功前赋动作；可映射R/F、T/G、Y/H三组正负轴（Negate/Swizzle，与Axis3D移动相同做法），不赋值时保留旧控制。不自动改输入资产。验收每轴单独转动、组合转动、切手停止旧轴、失焦停止旋转、抓物旋转与专用抓点对齐、30/60/120Hz角速度对比。新增原生旋转路径尚未经过UE编译/PIE验证；现有独立测试不覆盖FRotator及实际手目标变换。已定义的自由飞行限制继续适用。
 
 - 2026-11-04 PR #8：特殊姿势抓点新增显式TargetComponent与Priority，按手别、优先级、距离、稳定名称顺序选择，找不到时保留旧GrabPoses回退。生产选择方法的托管抽取测试覆盖错误组件/手别、多个点、优先级、距离、同距顺序和无候选；原生类型用替身，不是UE编译。新增具体蓝图配置和组合验收至LocalUEHandover。未制作资产、未运行PIE/头显；未合并main。GitHub文本API写权限与LFS上传权限分别记录，后者仍未证明。
+
+- 2026-11-04 PR #8新增桌面锁存抓握动作及程序入口，可单键盘先后抓取并保持双手，旧按住抓握保留。具体输入资产、双手验收及重置语义见LocalUEHandover。新增路由尚待UE编译/PIE；LFS上传授权仍未证明，不改二进制。
