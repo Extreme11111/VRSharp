@@ -28,6 +28,8 @@ public partial class AVRSharpDesktopTestPawn : APawn
 
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial UInputAction? DesktopHandRotate { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? DesktopToggleGrip { get; set; }
     private UEnhancedInputComponent? boundDesktopInput;
     private AVRSharpHand? gripInputHand;
     private UVRSharpGrabbable? gripInputObject;
@@ -70,6 +72,8 @@ public partial class AVRSharpDesktopTestPawn : APawn
             input.BindAction(DesktopHandRotate, ETriggerEvent.Completed, OnDesktopHandRotateStop);
             input.BindAction(DesktopHandRotate, ETriggerEvent.Canceled, OnDesktopHandRotateStop);
         }
+        if (DesktopToggleGrip is not null)
+            input.BindAction(DesktopToggleGrip, ETriggerEvent.Started, OnDesktopToggleGrip);
         boundDesktopInput = input;
         return true;
     }
@@ -112,6 +116,23 @@ public partial class AVRSharpDesktopTestPawn : APawn
     private void OnDesktopSwitch(FInputActionValue value, float elapsed, float triggered, UInputAction action)
     { SelectLeftHand(!ControlLeftHand); }
 
+
+    [UFunction]
+    private void OnDesktopToggleGrip(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    { ToggleActiveGrip(); }
+
+    // Latched grip lets one keyboard operate two hands independently.
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool ToggleActiveGrip()
+    {
+        var hand = ActiveHand;
+        if (hand is null || !SystemLibrary.IsValid(hand)) return false;
+        if (!hand.IsGrabbing) return hand.TryGrab();
+        hand.SetGrabTrigger(0);
+        hand.Release();
+        trigger = 0;
+        return !hand.IsGrabbing;
+    }
 
     private void ReleaseDesktopGrip()
     {
