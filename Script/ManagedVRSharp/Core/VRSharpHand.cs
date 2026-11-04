@@ -90,6 +90,8 @@ public partial class AVRSharpHand : AActor
     private float targetThumbWeight;
     private UVRSharpHandPose? activeGrabPose;
     private float activePoseTrigger;
+    // Only changed accepted values; context is the actual held primitive.
+    public event Action<AVRSharpHand, UVRSharpGrabbable, UPrimitiveComponent, float>? GrabTriggerChanged;
     public event Action<AVRSharpHand, UVRSharpHandPose>? GrabPoseEntered;
     public event Action<AVRSharpHand, UVRSharpHandPose>? GrabPoseExited;
     [UFunction(FunctionFlags.BlueprintCallable)]
@@ -706,6 +708,7 @@ public partial class AVRSharpHand : AActor
         // 缓存：回调里可能会清空/销毁
         var grabbable = GrabbedObject;
 
+        SetGrabTrigger(0);
         OnBeforeRelease?.Invoke(grabbable);
         if (grabbable is not null && SystemLibrary.IsValid(grabbable))
             grabbable.CallOnBeforeRelease();
@@ -777,9 +780,15 @@ public partial class AVRSharpHand : AActor
     [UFunction(FunctionFlags.BlueprintCallable)]
     public bool SetGrabTrigger(float value)
     {
-        if (!IsGrabbing || GetActiveGrabPose() is null || !float.IsFinite(value)) return false;
-        activePoseTrigger = Math.Clamp(value,0,1);
+        if (!IsGrabbing || !float.IsFinite(value)) return false;
+        var item = GrabbedObject;
+        var component = GetCurrentGrabComponent();
+        if (item is null || !SystemLibrary.IsValid(item) || component is null || !SystemLibrary.IsValid(component)) return false;
+        float next = Math.Clamp(value,0,1);
+        bool changed = next != activePoseTrigger;
+        activePoseTrigger = next;
         if (useTriggerBlend) targetIndexWeight = VRSharpMathHelper.BlendPoseWeight(authoredIndexWeight, triggerIndexWeight, activePoseTrigger);
+        if (changed) GrabTriggerChanged?.Invoke(this, item, component, activePoseTrigger);
         return true;
     }
 
