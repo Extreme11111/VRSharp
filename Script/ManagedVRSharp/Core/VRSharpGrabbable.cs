@@ -189,6 +189,7 @@ public partial class UVRSharpGrabbable : UActorComponent
 
         hand.IsGrabbing = true;
         hand.GrabbedObject = this;
+        hand.NotifyGrabbed(this, component);
         Grabbed?.Invoke(hand, this, component);
     }
 
@@ -229,6 +230,7 @@ public partial class UVRSharpGrabbable : UActorComponent
 
         if (hands.Count == 0)
             GrabbedComponent = null;
+        hand.NotifyReleased(this, releasedComponent);
         Released?.Invoke(hand, this, releasedComponent);
     }
 
