@@ -90,3 +90,7 @@ void HandleReleased(AVRSharpHand hand, UVRSharpGrabbable item, UPrimitiveCompone
 每点继续配置 AnimationKey、UseFingerWeights、UseTriggerBlend 等既有字段；动画蓝图通过 GetActiveGrabPose 读取 AnimationKey，通过 GetGrabPoseTrigger 驱动既有专用动画状态，进入/保持/退出接线见前文。本轮没有制作动画资产。
 本地验收：编译生成C#绑定并打开蓝图，确认组件引用可保存/重开；同一物体放两个同优先级抓点，用桌面双手目标分别靠近它们，抓取应各选近点；提高远点Priority应选远点；禁用该手后应跳过；两个Primitive的点不得串用；清空所有显式引用应恢复旧映射。放下、切手、重新抓取后姿势生命周期与事件仍应一致。
 已验证仅生产选择方法抽取的托管测试（原生组件/向量为替身）及独立数学检查；完整UE编译、组件引用序列化、PIE、真实对齐和头显未验证，不代表完整特殊姿势系统已验收。
+
+## PR #8 桌面锁存抓握（2026-11-04）
+VRSharpDesktopTestPawn.cs新增DesktopToggleGrip和ToggleActiveGrip。创建Bool输入动作IA_DesktopToggleGrip，映射E键，在Pawn默认值赋给DesktopToggleGrip（首次绑定前）。Started切换当前手抓放；不绑定Completed，因此松键仍持物，可切到另一手抓取。旧按住Grip模式保留；同一次测试避免混用两种动作。切手后分别再次按E释放各手；抓取失败返回false，不产生持有状态。ResetDesktopInput只释放旧按住输入拥有的抓握，锁存抓握需显式ReleaseActiveHand释放。
+验收：右手E抓取→松E→切左手→E抓取→两手保持→E只放左手→切右手E释放。空目标E返回false；再次接近物体可重试。独立数学和既有方法测试不能证明此新增输入路由；完整UE编译/PIE/头显未验证。
