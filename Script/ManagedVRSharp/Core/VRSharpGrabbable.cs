@@ -64,6 +64,40 @@ public partial class UVRSharpGrabbable : UActorComponent
 
     public UPrimitiveComponent? GrabbedComponent { get; private set; }
     public int GrabCount => hands.Count;
+    public bool IsGrabbed => hands.Count != 0;
+    public event Action<AVRSharpHand, UVRSharpGrabbable, UPrimitiveComponent>? Grabbed;
+    public event Action<AVRSharpHand, UVRSharpGrabbable, UPrimitiveComponent>? Released;
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool GetIsGrabbed() => IsGrabbed;
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public int GetGrabCount() => GrabCount;
+
+    public bool IsHeldBy(AVRSharpHand hand) => hand is not null && components.ContainsKey(hand);
+    public UPrimitiveComponent? GetHeldComponent(AVRSharpHand hand)
+        => hand is not null && components.TryGetValue(hand, out var value) && SystemLibrary.IsValid(value) ? value : null;
+    // Explicit snapshot: callers can enumerate safely while callbacks change holders.
+    public AVRSharpHand[] GetGrabbingHands() => hands.ToArray();
+
+    public bool TryGrabWith(AVRSharpHand hand)
+    {
+        if (hand is null || !SystemLibrary.IsValid(hand) || !SystemLibrary.IsValid(this)) return false;
+        if (hand.IsGrabbing) return hand.GrabbedObject == this && IsHeldBy(hand);
+        hand.GrabWithGrabbable(this, default);
+        return hand.IsGrabbing && hand.GrabbedObject == this && IsHeldBy(hand);
+    }
+
+    public bool ReleaseFrom(AVRSharpHand hand)
+    {
+        if (hand is null || !SystemLibrary.IsValid(hand) || !IsHeldBy(hand) || hand.GrabbedObject != this) return false;
+        hand.Release();
+        return !IsHeldBy(hand);
+    }
+
+    public void ReleaseAll()
+    {
+        foreach (var hand in GetGrabbingHands()) ReleaseFrom(hand);
+    }
 
     /// <summary>
     /// 获取 Owner 上所有的 UMeshComponent（包括 StaticMesh 和 SkeletalMesh）
@@ -124,17 +158,20 @@ public partial class UVRSharpGrabbable : UActorComponent
     /// </summary>
     public void Attach(AVRSharpHand hand, UPrimitiveComponent component)
     {
-        if (hand is null || component is null || !SystemLibrary.IsValid(component))
+        if (hand is null || !SystemLibrary.IsValid(hand) || component is null || !SystemLibrary.IsValid(component))
             return;
 
+        if (components.TryGetValue(hand, out var previous) && previous == component) return;
+        if (hand.IsGrabbing && hand.GrabbedObject != this) return;
+        if (!hand.AttachToComponent(component, "", EAttachmentRule.KeepWorld, EAttachmentRule.KeepWorld, EAttachmentRule.KeepWorld, true)) return;
         GrabbedComponent ??= component;
         components[hand] = component;
         hands.Remove(hand);
         hands.Add(hand);
 
-        hand.AttachToComponent(component, "", EAttachmentRule.KeepWorld, EAttachmentRule.KeepWorld, EAttachmentRule.KeepWorld, true);
         hand.IsGrabbing = true;
         hand.GrabbedObject = this;
+        Grabbed?.Invoke(hand, this, component);
     }
 
     /// <summary>
@@ -145,6 +182,7 @@ public partial class UVRSharpGrabbable : UActorComponent
         if (hand is null || !components.ContainsKey(hand))
             return;
 
+        var releasedComponent = components[hand];
         var idx = hands.IndexOf(hand);
         if (idx < 0) return;
 
@@ -173,6 +211,7 @@ public partial class UVRSharpGrabbable : UActorComponent
 
         if (hands.Count == 0)
             GrabbedComponent = null;
+        Released?.Invoke(hand, this, releasedComponent);
     }
 
 }
