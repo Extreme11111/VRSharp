@@ -213,7 +213,7 @@ class Rig {
  public TSubclassOf<AVRSharpHand> LeftHandClass=new(){ClassId=1},RightHandClass=new(){ClassId=2};
  public USceneComponent? LeftTarget=new(),RightTarget=new();
  public UInputAction? DesktopMove=new(),DesktopLook=new(),DesktopHandMove=new(),DesktopGrip=new(),
-  DesktopSwitchHand=new(),DesktopTrigger=new(),DesktopHandRotate,DesktopToggleGrip,DesktopFingers;
+  DesktopSwitchHand=new(),DesktopTrigger=new(),DesktopHandRotate,DesktopToggleGrip,DesktopFingers,DesktopLeftTrigger,DesktopRightTrigger;
  public bool desktopHandsPrepared;
  public string GetDesktopSetupIssues()
 '''
@@ -237,6 +237,52 @@ class Program {
 }
 '''
 with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-setup-") as d:
+ p=Path(d)
+ (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project>')
+ (p/"Program.cs").write_text(code)
+ subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
+
+# A keyboard/UI test can hold both triggers while moving only one hand.
+code = '''using System;
+struct FVector { public double X,Y,Z; public static FVector Zero=>default; }
+class AVRSharpHand {
+ public bool IsGrabbing=true;
+ public float HeldTrigger,Index;
+ public void SetGrabTrigger(float value){if(IsGrabbing)HeldTrigger=value;}
+ public void ClearFingerInput(){Index=0;}
+ public void SetFingerInput(float thumb,float index,float grasp){Index=index;}
+}
+static class SystemLibrary {public static bool IsValid(object? x)=>x!=null;}
+class Rig {
+ private float? leftTrigger,rightTrigger;
+ private float trigger;
+ private FVector fingerInput,moveInput,handInput,handRotateInput;
+ public bool ControlLeftHand=true;
+ public AVRSharpHand LeftHand=new(),RightHand=new();
+ private AVRSharpHand ActiveHand=>ControlLeftHand?LeftHand:RightHand;
+ private void ReleaseDesktopGrip(){}
+ public void Sample(){ApplyDesktopFingerInput(LeftHand,ControlLeftHand,leftTrigger);ApplyDesktopFingerInput(RightHand,!ControlLeftHand,rightTrigger);}
+'''
+for signature in ['public void SetHandTrigger(bool left, float value)', 'public void SetTrigger(float value)',
+                  'public void SelectLeftHand(bool left)', 'public void ResetDesktopInput()',
+                  'private void ApplyDesktopFingerInput(AVRSharpHand? hand, bool active, float? dedicatedTrigger)']:
+ code += signature + body(signature) + '\n'
+code += '''}
+class Program {
+ static void Check(bool ok){if(!ok)throw new Exception("desktop dual trigger regression");}
+ static void Main(){
+  var rig=new Rig();rig.RightHand.HeldTrigger=.4f;rig.Sample();Check(rig.RightHand.HeldTrigger==.4f);
+  rig.SetHandTrigger(true,.75f);rig.SetHandTrigger(false,.8f);rig.SetTrigger(1);rig.Sample();
+  Check(rig.LeftHand.HeldTrigger==1&&rig.RightHand.HeldTrigger==.8f);
+  rig.SelectLeftHand(false);rig.Sample();Check(rig.LeftHand.HeldTrigger==.75f&&rig.RightHand.HeldTrigger==.8f);
+  rig.SetHandTrigger(true,0);rig.Sample();Check(rig.LeftHand.HeldTrigger==0&&rig.RightHand.HeldTrigger==.8f);
+  rig.LeftHand.IsGrabbing=false;rig.SetHandTrigger(true,.5f);rig.Sample();Check(rig.LeftHand.Index==.5f);
+  rig.ResetDesktopInput();rig.Sample();Check(rig.LeftHand.Index==0&&rig.RightHand.HeldTrigger==0);
+  Console.WriteLine("Desktop dual triggers: simultaneous hold, switch, isolated release, empty hand and reset passed.");
+ }
+}
+'''
+with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-triggers-") as d:
  p=Path(d)
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project>')
  (p/"Program.cs").write_text(code)

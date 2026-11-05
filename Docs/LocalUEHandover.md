@@ -168,3 +168,7 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 ## PR #8 道具仅允许专用抓点（2026-11-06）
 在道具蓝图的 `VRSharpGrabbable` 开启 `RequireExplicitGrabPose`。同 Actor 添加 `VRSharpHandPose` 场景组件，将 `TargetComponent` 指向可抓取的碰撞 Primitive，并配置手别、优先级、对齐变换和 AnimationKey。接触候选只保留有匹配抓点的组件，抓取回调后再检查配置。此模式需要显式组件引用，旧 `GrabPoses` 名称表仅在此选项关闭时可回退。旧资产默认关闭。底层 `Attach` 仍是原来的焊接入口，游戏逻辑应调用 `TryGrab`、`TryGrabAtPose` 或 `TryGrabWith` 走完整验证。
 本地用 UE5.7/UnrealSharp0.1 生成 Glue 并编译。在桌面和 VR 测试地图放置一件带两块可抓碰撞的工具，只给把手配置抓点，并禁用左手。右手靠近机身时预期无该工具高亮且抓取失败，靠近把手可抓取、播放专用动画并使用扳机。左手应失败。在同一抓球中放置另一个正常可抓物体，机身不应阻挡正常候选。取消限制后验证原抓法与名称映射可用。托管测试覆盖接触候选过滤和显式抓点选择。UE 编译、PIE、高亮、碰撞和头显待验。
+
+## PR #8 桌面双手独立扳机（2026-11-06）
+`Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs` 新增 `DesktopLeftTrigger`、`DesktopRightTrigger` 和 `SetHandTrigger(left,value)`。在 `IMC_VRSharpDesktop` 中分别创建两个不同的 Axis3D Action，键值进入 X 轴，例如 V/B 分别按压左右手，指派给 Pawn 对应属性。也可用测试 Widget 的两个滑条调用 SetHandTrigger。现有 DesktopTrigger 仍跟随当前手，与该手专用值取最大值。切手只清共享扳机，专用值保留。Completed/Canceled 清对应手，ResetDesktopInput 清两手，空手可观察各自食指。
+先用 UE5.7/UnrealSharp0.1 编译 Glue。在无头显桌面地图用锁存抓握让两手各抓一件测试物，或共同抓允许双手的同一工具。给工具设置扳机开关和专用姿势，按住 V 和 B 后切手并松 V，预期左手扳机归零、右手值不变，双手工具保持开启。再松 B，预期关闭。测试失焦时调用 ResetDesktopInput 并验证两手都归零。托管测试运行生产路由方法，原生按键映射、完整 UE 编译、PIE、动画显示和头显仍待验证。

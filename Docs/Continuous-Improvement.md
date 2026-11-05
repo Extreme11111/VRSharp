@@ -122,3 +122,5 @@ Combined math, pose/trigger, desktop grip, event state and 192 admission policy 
 - 2026-11-06 PR #8 整合 PR #2。持物释放回调中销毁道具时恢复手的抓放和动画状态，桌面自建手退出复用该路径。托管回归覆盖已销毁、两类回调中销毁及正常淡出。测试场景和 UE 待验项见 LocalUEHandover。
 
 - 2026-11-06 PR #8 增加 Grabbable 的 RequireExplicitGrabPose。专用抓法可在接触选择阶段排除机身或错误手别，并在实际抓取前复核。旧资产默认保持普通抓法。两个数学检查和托管候选回归通过，UE、PIE 和头显仍待验，配置见 LocalUEHandover。
+
+- 2026-11-06 PR #8 桌面测试新增独立左右扳机键与脚本入口，无需 XR 即可复现双手工具和特殊姿势的同时按压、切手和单侧松开。托管路由回归与两项独立数学检查通过，UE 实际输入和动画待验，接线见 LocalUEHandover。

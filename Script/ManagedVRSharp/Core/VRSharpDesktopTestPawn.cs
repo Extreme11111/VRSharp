@@ -120,6 +120,11 @@ public partial class AVRSharpDesktopTestPawn : APawn
     public partial UInputAction? DesktopSwitchHand { get; set; }
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial UInputAction? DesktopTrigger { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? DesktopLeftTrigger { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? DesktopRightTrigger { get; set; }
+    private float? leftTrigger, rightTrigger;
 
     private bool desktopHandsPrepared;
 
@@ -144,6 +149,8 @@ public partial class AVRSharpDesktopTestPawn : APawn
         CheckDesktopAction(issues, usedActions, nameof(DesktopGrip), DesktopGrip, true);
         CheckDesktopAction(issues, usedActions, nameof(DesktopSwitchHand), DesktopSwitchHand, true);
         CheckDesktopAction(issues, usedActions, nameof(DesktopTrigger), DesktopTrigger, true);
+        CheckDesktopAction(issues, usedActions, nameof(DesktopLeftTrigger), DesktopLeftTrigger, false);
+        CheckDesktopAction(issues, usedActions, nameof(DesktopRightTrigger), DesktopRightTrigger, false);
         CheckDesktopAction(issues, usedActions, nameof(DesktopHandRotate), DesktopHandRotate, false);
         CheckDesktopAction(issues, usedActions, nameof(DesktopToggleGrip), DesktopToggleGrip, false);
         CheckDesktopAction(issues, usedActions, nameof(DesktopFingers), DesktopFingers, false);
@@ -193,6 +200,18 @@ public partial class AVRSharpDesktopTestPawn : APawn
         input.BindAction(DesktopTrigger, ETriggerEvent.Triggered, OnDesktopTrigger, out _);
         input.BindAction(DesktopTrigger, ETriggerEvent.Completed, OnDesktopTriggerStop, out _);
         input.BindAction(DesktopTrigger, ETriggerEvent.Canceled, OnDesktopTriggerStop, out _);
+        if (DesktopLeftTrigger is { } leftTriggerAction)
+        {
+            input.BindAction(leftTriggerAction, ETriggerEvent.Triggered, OnDesktopLeftTrigger, out _);
+            input.BindAction(leftTriggerAction, ETriggerEvent.Completed, OnDesktopLeftTriggerStop, out _);
+            input.BindAction(leftTriggerAction, ETriggerEvent.Canceled, OnDesktopLeftTriggerStop, out _);
+        }
+        if (DesktopRightTrigger is { } rightTriggerAction)
+        {
+            input.BindAction(rightTriggerAction, ETriggerEvent.Triggered, OnDesktopRightTrigger, out _);
+            input.BindAction(rightTriggerAction, ETriggerEvent.Completed, OnDesktopRightTriggerStop, out _);
+            input.BindAction(rightTriggerAction, ETriggerEvent.Canceled, OnDesktopRightTriggerStop, out _);
+        }
         input.BindAction(DesktopGrip, ETriggerEvent.Started, OnDesktopGrab, out _);
         input.BindAction(DesktopGrip, ETriggerEvent.Completed, OnDesktopRelease, out _);
         input.BindAction(DesktopGrip, ETriggerEvent.Canceled, OnDesktopRelease, out _);
@@ -235,6 +254,18 @@ public partial class AVRSharpDesktopTestPawn : APawn
     [UFunction]
     private void OnDesktopTriggerStop(FInputActionValue value, float elapsed, float triggered, UInputAction action)
     { SetTrigger(0); }
+    [UFunction]
+    private void OnDesktopLeftTrigger(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+        => SetHandTrigger(true, (float)value.GetAxis3D().X);
+    [UFunction]
+    private void OnDesktopLeftTriggerStop(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+        => SetHandTrigger(true, 0);
+    [UFunction]
+    private void OnDesktopRightTrigger(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+        => SetHandTrigger(false, (float)value.GetAxis3D().X);
+    [UFunction]
+    private void OnDesktopRightTriggerStop(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+        => SetHandTrigger(false, 0);
     [UFunction]
     private void OnDesktopGrab(FInputActionValue value, float elapsed, float triggered, UInputAction action)
     {
@@ -341,7 +372,8 @@ public partial class AVRSharpDesktopTestPawn : APawn
     [UFunction(FunctionFlags.BlueprintCallable)]
     public void SelectLeftHand(bool left)
     {
-        if (ActiveHand is { } old && SystemLibrary.IsValid(old)) old.SetGrabTrigger(0);
+        if (ActiveHand is { } old && SystemLibrary.IsValid(old))
+            old.SetGrabTrigger((ControlLeftHand ? leftTrigger : rightTrigger) ?? 0);
         trigger = 0;
         handInput = handRotateInput = FVector.Zero;
         if (ActiveHand is { } previous && SystemLibrary.IsValid(previous)) previous.ClearFingerInput();
@@ -367,9 +399,19 @@ public partial class AVRSharpDesktopTestPawn : APawn
         if (float.IsFinite(value)) trigger = Math.Clamp(value,0,1);
     }
     [UFunction(FunctionFlags.BlueprintCallable)]
+    public void SetHandTrigger(bool left, float value)
+    {
+        if (!float.IsFinite(value)) return;
+        float sample = Math.Clamp(value, 0, 1);
+        if (left) leftTrigger = sample;
+        else rightTrigger = sample;
+    }
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
     public void ResetDesktopInput()
     {
         ReleaseDesktopGrip();
+        leftTrigger = rightTrigger = null;
         fingerInput = FVector.Zero;
         if (LeftHand is { } lh && SystemLibrary.IsValid(lh)) lh.ClearFingerInput();
         if (RightHand is { } rh && SystemLibrary.IsValid(rh)) rh.ClearFingerInput();
@@ -443,12 +485,21 @@ public partial class AVRSharpDesktopTestPawn : APawn
         }
         Drive(LeftHand,LeftTarget,dt);
         Drive(RightHand,RightTarget,dt);
-        if (ActiveHand is { } active && SystemLibrary.IsValid(active))
-        {
-            if (active.IsGrabbing) active.SetGrabTrigger(trigger);
-            else active.SetFingerInput((float)fingerInput.X, Math.Max((float)fingerInput.Y,trigger), (float)fingerInput.Z);
-        }
+        ApplyDesktopFingerInput(LeftHand, ControlLeftHand, leftTrigger);
+        ApplyDesktopFingerInput(RightHand, !ControlLeftHand, rightTrigger);
     }
+    private void ApplyDesktopFingerInput(AVRSharpHand? hand, bool active, float? dedicatedTrigger)
+    {
+        if (hand is null || !SystemLibrary.IsValid(hand) || (!active && dedicatedTrigger is null)) return;
+        float triggerValue = Math.Max(dedicatedTrigger ?? 0, active ? trigger : 0);
+        if (hand.IsGrabbing)
+            hand.SetGrabTrigger(triggerValue);
+        else if (active)
+            hand.SetFingerInput((float)fingerInput.X, Math.Max((float)fingerInput.Y, triggerValue), (float)fingerInput.Z);
+        else
+            hand.SetFingerInput(0, triggerValue, 0);
+    }
+
     private static void Drive(AVRSharpHand? hand,USceneComponent? target,float dt)
     {
         if (hand is null || target is null || !SystemLibrary.IsValid(hand) || !SystemLibrary.IsValid(target)) return;
