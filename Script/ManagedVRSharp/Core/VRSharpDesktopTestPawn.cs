@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnrealSharp;
 using UnrealSharp.Attributes;
 using UnrealSharp.CoreUObject;
@@ -119,6 +120,62 @@ public partial class AVRSharpDesktopTestPawn : APawn
     public partial UInputAction? DesktopSwitchHand { get; set; }
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial UInputAction? DesktopTrigger { get; set; }
+
+    private bool desktopHandsPrepared;
+
+    // An empty report means that the required object references are configured.
+    // Mapping asset contents and physical hand components still need editor validation.
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public string GetDesktopSetupIssues()
+    {
+        var issues = new List<string>();
+        if (Camera is null || !SystemLibrary.IsValid(Camera)) issues.Add("Camera is missing or invalid.");
+        CheckDesktopHandSetup(issues, "Left", LeftHand, LeftHandClass, LeftTarget);
+        CheckDesktopHandSetup(issues, "Right", RightHand, RightHandClass, RightTarget);
+        if (LeftHand is not null && LeftHand == RightHand) issues.Add("LeftHand and RightHand reference the same actor.");
+        if (LeftTarget is not null && LeftTarget == RightTarget) issues.Add("LeftTarget and RightTarget reference the same component.");
+        if (DesktopMappingContext is not null && !SystemLibrary.IsValid(DesktopMappingContext))
+            issues.Add("DesktopMappingContext is invalid. Assign a valid context or leave it empty for host-managed mapping.");
+
+        var usedActions = new Dictionary<UInputAction, string>();
+        CheckDesktopAction(issues, usedActions, nameof(DesktopMove), DesktopMove, true);
+        CheckDesktopAction(issues, usedActions, nameof(DesktopLook), DesktopLook, true);
+        CheckDesktopAction(issues, usedActions, nameof(DesktopHandMove), DesktopHandMove, true);
+        CheckDesktopAction(issues, usedActions, nameof(DesktopGrip), DesktopGrip, true);
+        CheckDesktopAction(issues, usedActions, nameof(DesktopSwitchHand), DesktopSwitchHand, true);
+        CheckDesktopAction(issues, usedActions, nameof(DesktopTrigger), DesktopTrigger, true);
+        CheckDesktopAction(issues, usedActions, nameof(DesktopHandRotate), DesktopHandRotate, false);
+        CheckDesktopAction(issues, usedActions, nameof(DesktopToggleGrip), DesktopToggleGrip, false);
+        CheckDesktopAction(issues, usedActions, nameof(DesktopFingers), DesktopFingers, false);
+        return string.Join("\n", issues);
+    }
+
+    private void CheckDesktopHandSetup(List<string> issues, string side, AVRSharpHand? hand,
+        TSubclassOf<AVRSharpHand> handClass, USceneComponent? target)
+    {
+        if (target is null || !SystemLibrary.IsValid(target)) issues.Add($"{side}Target is missing or invalid.");
+        if (hand is not null && SystemLibrary.IsValid(hand)) return;
+        if (desktopHandsPrepared)
+            issues.Add($"{side}Hand is unavailable after BeginPlay. Check the placed actor or {side}HandClass and target.");
+        else if (handClass.Equals(default(TSubclassOf<AVRSharpHand>)))
+            issues.Add($"Assign {side}Hand or {side}HandClass.");
+    }
+
+    private static void CheckDesktopAction(List<string> issues, Dictionary<UInputAction, string> usedActions,
+        string name, UInputAction? action, bool required)
+    {
+        if (action is null || !SystemLibrary.IsValid(action))
+        {
+            if (required || action is not null) issues.Add($"{name} is missing or invalid.");
+            return;
+        }
+        if (usedActions.TryGetValue(action, out var previous)) issues.Add($"{name} reuses the action assigned to {previous}.");
+        else usedActions.Add(action, name);
+    }
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool IsDesktopInputBound() => boundDesktopInput is not null &&
+        SystemLibrary.IsValid(boundDesktopInput) && boundDesktopInput == InputComponent;
 
     // Call after possession; Tick also retries until EnhancedInputComponent exists.
     public bool BindDesktopInput(UEnhancedInputComponent input)
@@ -335,6 +392,7 @@ public partial class AVRSharpDesktopTestPawn : APawn
         }
         LeftHand = PrepareDesktopHand(LeftHand, LeftHandClass, LeftTarget, true, out spawnedLeftHand);
         RightHand = PrepareDesktopHand(RightHand, RightHandClass, RightTarget, false, out spawnedRightHand);
+        desktopHandsPrepared = true;
     }
     private AVRSharpHand? PrepareDesktopHand(AVRSharpHand? assignedHand, TSubclassOf<AVRSharpHand> handClass,
         USceneComponent? target, bool isLeft, out AVRSharpHand? spawnedHand)

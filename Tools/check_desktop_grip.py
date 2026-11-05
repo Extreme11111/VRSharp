@@ -197,3 +197,47 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-hands-") as d:
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project>')
  (p/"Program.cs").write_text(code)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
+
+# Compile the setup report with fake native references and test authored/runtime setup.
+code = '''using System;
+using System.Collections.Generic;
+class Native {public bool Valid=true;}
+class AVRSharpHand:Native {}
+class USceneComponent:Native {}
+class UInputAction:Native {}
+struct TSubclassOf<T> {public int ClassId;}
+static class SystemLibrary {public static bool IsValid(Native? value)=>value?.Valid==true;}
+class Rig {
+ public Native? Camera=new(),DesktopMappingContext;
+ public AVRSharpHand? LeftHand,RightHand;
+ public TSubclassOf<AVRSharpHand> LeftHandClass=new(){ClassId=1},RightHandClass=new(){ClassId=2};
+ public USceneComponent? LeftTarget=new(),RightTarget=new();
+ public UInputAction? DesktopMove=new(),DesktopLook=new(),DesktopHandMove=new(),DesktopGrip=new(),
+  DesktopSwitchHand=new(),DesktopTrigger=new(),DesktopHandRotate,DesktopToggleGrip,DesktopFingers;
+ public bool desktopHandsPrepared;
+ public string GetDesktopSetupIssues()
+'''
+code += body('public string GetDesktopSetupIssues(')
+code += ' private void CheckDesktopHandSetup(List<string> issues,string side,AVRSharpHand? hand,TSubclassOf<AVRSharpHand> handClass,USceneComponent? target) ' + body('private void CheckDesktopHandSetup(')
+code += ' private static void CheckDesktopAction(List<string> issues,Dictionary<UInputAction,string> usedActions,string name,UInputAction? action,bool required) ' + body('private static void CheckDesktopAction(')
+code += '''}
+class Program {
+ static void Check(bool ok){if(!ok)throw new Exception("desktop setup report regression");}
+ static void Main(){
+  var rig=new Rig();Check(rig.GetDesktopSetupIssues()=="");
+  rig.DesktopGrip=rig.DesktopTrigger;rig.LeftHandClass=default;rig.LeftTarget=null;
+  var report=rig.GetDesktopSetupIssues();Check(report.Contains("DesktopTrigger reuses")&&report.Contains("Assign LeftHand")&&report.Contains("LeftTarget is missing"));
+  rig.desktopHandsPrepared=true;rig.RightHand=new();rig.DesktopMappingContext=new(){Valid=false};
+  report=rig.GetDesktopSetupIssues();Check(report.Contains("LeftHand is unavailable")&&report.Contains("DesktopMappingContext is invalid"));
+  rig.LeftTarget=new();rig.LeftHand=rig.RightHand;rig.DesktopMappingContext=null;rig.DesktopGrip=new();
+  Check(rig.GetDesktopSetupIssues().Contains("same actor"));
+  rig.LeftHand=new();Check(rig.GetDesktopSetupIssues()=="");
+  Console.WriteLine("Desktop setup report: classes, missing references, duplicate actions, failed runtime hand and recovery passed.");
+ }
+}
+'''
+with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-setup-") as d:
+ p=Path(d)
+ (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project>')
+ (p/"Program.cs").write_text(code)
+ subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)

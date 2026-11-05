@@ -156,3 +156,7 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 在 `Script/ManagedVRSharp/Core/VRSharpGrabbable.cs` 对应的 Grabbable 组件上设置 `TriggerPressThreshold=0.75`、`TriggerReleaseThreshold=0.55`。两个阈值之间保持各手原状态，避免模拟扳机在临界值来回抖动。默认按下阈值为 0，关闭开关功能。配置要求 `0 <= release < press <= 1`，无效配置在下一次有效扳机样本时清掉该手的激活。配置建议在抓取前完成。
 工具 C# 类可用 `grabbable.TriggerActivationChanged += OnActivationChanged` 在 BeginPlay 订阅，并在 EndPlay 退订。回调签名为 `(AVRSharpHand hand, UVRSharpGrabbable item, UPrimitiveComponent primitive, bool active)`。可用 `active` 开关手电筒灯或电钻马达。蓝图可通过 `GetIsTriggerActive` 读取合并后的状态，或由 C# 工具类转发事件。第一个激活手触发开启，最后一个激活手松开扳机或放下时触发关闭。更新状态后发布开关事件，再转发原模拟输入事件。直接 Detach 也会清除该手的激活，先于 Released 通知。回调内不要递归抓放。
 在桌面测试地图放一个带可抓碰撞的手电筒测试蓝图，沿用已有桌面扳机或 OpenXR 模拟动作。用蓝图滑条调用 `SetTrigger` 依次发送 0.8、0.65、0.55，预期开、保持、关各一次。双手抓同一物体时让两只手依次按住，先松或放下其中一只应保持，另一只放下后关闭。桌面切手会清空旧手扳机，双手同时按压需用 XR 或 C# 直接分别输入。确认空手、错误 Primitive 和未设置阈值的旧物体不触发开关。完整 UE 编译、蓝图接线、PIE 和头显待验证，托管回归使用原生替身。
+
+## PR #8 桌面测试地图配置自检（2026-11-06）
+`Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs` 提供 `GetDesktopSetupIssues` 和 `IsDesktopInputBound`。在桌面 Pawn 蓝图 BeginPlay 父类执行后调用前者，返回字符串非空时接 Print String 或调试 Widget。也可加一个检查按钮按需刷新，不必每帧调用。报告列出缺失或失效的相机、目标、手实例/类和必需 Action，并指出共享手/目标或重复 Action。手生成后会报告实际不可用的一侧。`IsDesktopInputBound` 可在占用后的下一帧或按钮上查询当前 Enhanced Input 组件绑定状态。
+本地验收先编译 Glue。在无头显 PIE 中，故意清空 `DesktopGrip` 并将 `DesktopLook` 指向 `DesktopMove`，应同时报告缺失与重复。修复后运行，应得到空报告，键鼠映射生效后绑定查询为 true。再移除一侧手类和实例，应定位对应手。留空可选 `DesktopMappingContext` 时可由宿主管理，不报缺项。报告检查引用及绑定状态，映射内键位、Action 轴类型、手骨骼与碰撞需按前节另行验收。托管测试使用原生替身，完整 UE 编译、PIE、头显尚未验证。
