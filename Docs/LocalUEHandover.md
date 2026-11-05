@@ -108,3 +108,8 @@ Core/VRSharpHand.cs新增C# GrabTriggerChanged(hand,item,primitive,value)，业�
 Core/VRSharpGrabbable.cs新增GrabTriggerChanged(hand,item,primitive,value)，对象业务C#组件直接在BeginPlay订阅自己的Grabbable，EndPlay退订，不必逐一查找左右手。手侧更新状态/动画后先通知手，再通知物体；物体通知会再次核对IsHeldBy/GetHeldComponent，手侧回调已改变持有关系时不向旧物体发送。回调中仍不要递归抓放。放下归零语义沿用上一节。
 示例：grabbable.GrabTriggerChanged += OnToolTrigger；OnToolTrigger按primitive区分把手或按钮，记录每只手value；双手工具在Released时清除对应手记录，工具是否启动按产品逻辑决定。该事件为C#事件，不是已生成的Blueprint动态委托；蓝图业务需本地增加C#转发组件后接线。
 验收：桌面和XR分别抓取同一工具，只有该工具收到变化；双手上下文各自正确；重复值不通知；正常放下归零；抓放后旧工具不再收到输入。托管手方法抽取测试验证桥接调用，未编译完整物体/手类；UE编译、PIE、实际工具示例资产及头显仍未验证。
+
+## PR #8 特殊姿势动画淡入淡出（2026-11-05）
+Core/VRSharpHandPose.cs新增EnterBlendSeconds/ExitBlendSeconds，秒，默认0兼容瞬切。Core/VRSharpHand.cs在成功抓取后启动视觉生命周期，Tick推进0..1权重；放下立即清理逻辑GetActiveGrabPose/触发旧退出事件，但GetAnimationGrabPose保留退出姿势到淡出完成，IsGrabPoseExiting区分退出。无效资源立即清理；淡出中抓新姿势立即换新姿势并从其进入权重开始，不是两套专用动画交叉混合。
+本地AnimBP Event Blueprint Update Animation：读取手GetAnimationGrabPose并检查有效→缓存AnimationKey、GetGrabPoseBlendWeight、IsGrabPoseExiting；无效则权重0。AnimGraph以原有动态手指图为Base，按AnimationKey选择左右手匹配的专用Sequence Player或可复用姿势子图（如ToolGrip），通过Blend Poses by float的Alpha接上述权重；专用图内部用GetGrabPoseTrigger混合ToolGrip/ToolPress动画。不要用GetActiveGrabPose为空作为整个专用图的立即关闭条件，否则跳过淡出。退出期间扳机归零，逻辑Released仍即时发生，不延迟物理释放。
+测试资产建议/VRSharp/Tests/Animations/ToolGrip_L、ToolGrip_R、ToolPress_L、ToolPress_R，须本地制作匹配手骨架；本轮未生成资产。抓点Enter=.15、Exit=.2。验收桌面抓取淡入→持续保持/扳机→放下淡出→恢复动态图；进入中放下、退出中抓另一物体、抓点销毁、左右手独立、30/60/120Hz。托管测试直接抽取生产进入/推进方法，原生有效性用替身；未验证完整UE编译、AnimBP节点/资产兼容、PIE、视觉质量与头显。
