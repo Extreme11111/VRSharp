@@ -88,6 +88,38 @@ public partial class AVRSharpHand : AActor
     private float targetGraspWeight;
     private float targetIndexWeight;
     private float targetThumbWeight;
+    private UVRSharpHandPose? animationPose;
+    private float poseBlendWeight;
+    private bool poseExiting;
+
+    // Visual pose survives logical release until its configured fade has completed.
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public UVRSharpHandPose? GetAnimationGrabPose()
+        => animationPose is not null && SystemLibrary.IsValid(animationPose) ? animationPose : null;
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public float GetGrabPoseBlendWeight() => GetAnimationGrabPose() is null ? 0 : poseBlendWeight;
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool IsGrabPoseExiting() => GetAnimationGrabPose() is not null && poseExiting;
+
+    private void BeginPoseAnimation(UVRSharpHandPose? pose)
+    {
+        animationPose = pose;
+        poseExiting = false;
+        poseBlendWeight = pose is not null && float.IsFinite(pose.EnterBlendSeconds) && pose.EnterBlendSeconds > 0 ? 0 : 1;
+        if (pose is null) poseBlendWeight = 0;
+    }
+
+    private void AdvancePoseAnimation(float deltaSeconds)
+    {
+        var pose = GetAnimationGrabPose();
+        if (pose is null) { animationPose = null; poseBlendWeight = 0; poseExiting = false; return; }
+        if (!float.IsFinite(deltaSeconds) || deltaSeconds <= 0) return;
+        float duration = poseExiting ? pose.ExitBlendSeconds : pose.EnterBlendSeconds;
+        float step = float.IsFinite(duration) && duration > 0 ? deltaSeconds / duration : 1;
+        poseBlendWeight = Math.Clamp(poseBlendWeight + (poseExiting ? -step : step),0,1);
+        if (poseExiting && poseBlendWeight == 0) { animationPose = null; poseExiting = false; }
+    }
+
     private UVRSharpHandPose? activeGrabPose;
     private float activePoseTrigger;
     // Only changed accepted values; context is the actual held primitive.
@@ -230,6 +262,7 @@ public partial class AVRSharpHand : AActor
     override public void Tick(float deltaSeconds)
     {
         base.Tick(deltaSeconds);
+        AdvancePoseAnimation(deltaSeconds);
         if (!IsGrabbing)
             RefreshGrabTarget();
 
@@ -689,6 +722,7 @@ public partial class AVRSharpHand : AActor
         if (IsGrabbing && GrabbedObject == grabbable)
         {
             activeGrabPose = handPose;
+            BeginPoseAnimation(handPose);
             activePoseTrigger = 0;
             if (handPose is not null) GrabPoseEntered?.Invoke(this, handPose);
         }
@@ -718,6 +752,9 @@ public partial class AVRSharpHand : AActor
         // 松开抓握时，手指回到张开（空手时再按原有输入逻辑调整）
         var exitedPose = activeGrabPose;
         activeGrabPose = null;
+        poseExiting = animationPose is not null;
+        if (poseExiting && (!float.IsFinite(animationPose!.ExitBlendSeconds) || animationPose.ExitBlendSeconds <= 0))
+        { animationPose = null; poseBlendWeight = 0; poseExiting = false; }
         activePoseTrigger = 0;
         useAuthoredFingerWeights = false;
         useTriggerBlend = false;
