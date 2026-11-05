@@ -107,3 +107,5 @@ Combined math, pose/trigger, desktop grip, event state and 192 admission policy 
 - 2026-11-05 PR #8 接通现有 XR 手输入与桌面共用的持物扳机路径。可选独立模拟轴，旧数字动作回退，空手与持物切换保留最近输入。桌面绑定对齐仓库现有 UnrealSharp 调用签名。映射、重复转发迁移与验收见 LocalUEHandover。联合 .NET9 检查验证数学和托管方法，UE 编译、PIE 和头显待验。当前会话 LFS fsck 通过，上传权限仍未证明。
 
 - 2026-11-05 PR #8 在 Grabbable 增加可选 DropWithoutMomentum。最后一手释放后对有效模拟刚体清除线速度和角速度，Released 订阅者可读取释放后的状态。回归覆盖默认惯性、双手与组件隔离、失效及非模拟组件。UE 编译、PIE、头显待验，具体场景见 LocalUEHandover。
+
+- 2026-11-05 PR #8 增加可重复的指定抓点入口，连接桌面 Pawn、局部接触筛选与既有特殊姿势生命周期。拒绝远处绑定组件、错误 Actor 或手别，失败不回退到其他姿势。联合 .NET9 检查覆盖托管逻辑。UE 编译、PIE 和头显待验，按钮接线见 LocalUEHandover。

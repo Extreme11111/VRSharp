@@ -597,7 +597,7 @@ public partial class AVRSharpHand : AActor
 
     // Use the actual collision surface and the same origin/range for highlight and grip.
     private bool TrySelectGrabHit(IList<FHitResult> hits, UVRSharpGrabbable? specificTarget,
-        out FHitResult selected, out UVRSharpGrabbable? grabbable)
+        out FHitResult selected, out UVRSharpGrabbable? grabbable, UPrimitiveComponent? specificComponent = null)
     {
         selected = default;
         grabbable = null;
@@ -608,6 +608,7 @@ public partial class AVRSharpHand : AActor
         foreach (var hit in hits)
         {
             var component = hit.Component.Object;
+            if (specificComponent is not null && component != specificComponent) continue;
             var candidate = FindGrabbable(component);
             if (candidate is null || (specificTarget is not null && candidate != specificTarget)) continue;
             var point = hit.ImpactPoint;
@@ -694,7 +695,30 @@ public partial class AVRSharpHand : AActor
         return best;
     }
 
-    private bool Grab(UVRSharpGrabbable grabbable, FVector location, FVector normal, UPrimitiveComponent component)
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool TryGrabAtPose(UVRSharpGrabbable grabbable, UVRSharpHandPose pose)
+    {
+        if (IsGrabbing || grabbable is null || !SystemLibrary.IsValid(grabbable) ||
+            pose is null || !SystemLibrary.IsValid(pose)) return false;
+        var component = pose.TargetComponent;
+        if (component is null || !IsRequestedPoseValid(grabbable, component, pose)) return false;
+
+        EnvironmentCheck(grabbable, component);
+        if (!TrySelectGrabHit(targetHitResults, grabbable, out var hit, out _, component)) return false;
+        return Grab(grabbable, hit.ImpactPoint, hit.ImpactNormal, component, pose);
+    }
+
+    private bool IsRequestedPoseValid(UVRSharpGrabbable grabbable, UPrimitiveComponent component, UVRSharpHandPose pose)
+    {
+        if (!SystemLibrary.IsValid(pose) || !SystemLibrary.IsValid(component) ||
+            grabbable.Owner is null || pose.Owner != grabbable.Owner || component.Owner != grabbable.Owner ||
+            pose.TargetComponent != component || (IsLeft ? pose.DisableLeftHand : pose.DisableRightHand) || Palm is null)
+            return false;
+        return double.IsFinite(FVector.DistanceSquared(Palm.WorldLocation, pose.WorldLocation));
+    }
+
+    private bool Grab(UVRSharpGrabbable grabbable, FVector location, FVector normal, UPrimitiveComponent component,
+        UVRSharpHandPose? requestedPose = null)
     {
         if (!SystemLibrary.IsValid(grabbable) || !SystemLibrary.IsValid(component) || !grabbable.CanGrab(this)) return false;
         // 事件
@@ -705,7 +729,9 @@ public partial class AVRSharpHand : AActor
 
         // 检查是否有预定义的手部姿态
         var componentName = SystemLibrary.GetObjectName(component);
-        UVRSharpHandPose? handPose = FindExplicitGrabPose(grabbable, component);
+        if (requestedPose is not null && (IsGrabbing || !IsRequestedPoseValid(grabbable, component, requestedPose)))
+            return false;
+        UVRSharpHandPose? handPose = requestedPose ?? FindExplicitGrabPose(grabbable, component);
 
         if (handPose is null && grabbable.GrabPoses is not null)
         {
@@ -804,7 +830,7 @@ public partial class AVRSharpHand : AActor
     /// <summary>
     /// 每帧检测手下方的 grabbable，缓存到 targetHitResults
     /// </summary>
-    private void EnvironmentCheck(UVRSharpGrabbable? specificTarget = null)
+    private void EnvironmentCheck(UVRSharpGrabbable? specificTarget = null, UPrimitiveComponent? specificComponent = null)
     {
         targetHitResults.Clear();
         if (GrabSphere is null) return;
@@ -815,7 +841,7 @@ public partial class AVRSharpHand : AActor
         // start at the sphere centre: the rear half must not win the forward ray.
         MultiLineTraceForObjects(origin, origin - GrabSphere.UpVector * radius,
             GrabObjectTypes, false, [this], debug, out var lineHits, true);
-        if (TrySelectGrabHit(lineHits, specificTarget, out var lineHit, out _))
+        if (TrySelectGrabHit(lineHits, specificTarget, out var lineHit, out _, specificComponent))
         {
             targetHitResults.Add(lineHit);
             return;
@@ -825,6 +851,7 @@ public partial class AVRSharpHand : AActor
         if (!SphereOverlapComponents(origin, radius, GrabObjectTypes, default, [this], out var components)) return;
         foreach (var component in components)
         {
+            if (specificComponent is not null && component != specificComponent) continue;
             var candidate = FindGrabbable(component);
             if (candidate is null || (specificTarget is not null && candidate != specificTarget)
                 || !TryGetGrabPoint(component, origin, out var point)) continue;
@@ -838,7 +865,7 @@ public partial class AVRSharpHand : AActor
             });
         }
         // Cache a single winner so highlighting and actual grabbing cannot diverge.
-        if (TrySelectGrabHit(targetHitResults, specificTarget, out var nearest, out _))
+        if (TrySelectGrabHit(targetHitResults, specificTarget, out var nearest, out _, specificComponent))
         {
             targetHitResults.Clear();
             targetHitResults.Add(nearest);

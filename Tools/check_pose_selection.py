@@ -44,3 +44,56 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-pose-animation-") as d:
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework></PropertyGroup></Project>')
  (p/"Program.cs").write_text(code)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
+
+# Exercise the requested-pose entry point and production contact filter together.
+code = '''using System;
+using System.Collections.Generic;
+class Owner {}
+class UPrimitiveComponent { public Owner? Owner; }
+class UVRSharpGrabbable { public Owner? Owner; }
+class UVRSharpHandPose { public Owner? Owner; public UPrimitiveComponent? TargetComponent;
+ public FVector WorldLocation; public bool DisableLeftHand, DisableRightHand; }
+struct FVector { public double X; public double LengthSquared()=>X*X;
+ public static double DistanceSquared(FVector a,FVector b)=>(a.X-b.X)*(a.X-b.X); }
+class Sphere { public FVector WorldLocation; public float ScaledSphereRadius=10; public FVector UpVector=new(){X=1}; }
+struct ComponentRef { public UPrimitiveComponent? Object; }
+struct FHitResult { public ComponentRef Component; public FVector ImpactPoint,ImpactNormal; public bool StartPenetrating; }
+static class SystemLibrary { public static bool IsValid(object? value)=>value!=null; }
+class Rig {
+ public bool IsGrabbing,IsLeft;
+ public Sphere? Palm=new(),GrabSphere=new();
+ public UVRSharpGrabbable? Item;
+ public UVRSharpHandPose? Attached;
+ public List<FHitResult> targetHitResults=new();
+ private void EnvironmentCheck(UVRSharpGrabbable g,UPrimitiveComponent c) {}
+ private UVRSharpGrabbable? FindGrabbable(UPrimitiveComponent? c)=>c?.Owner==Item?.Owner?Item:null;
+ private bool TryGetGrabPoint(UPrimitiveComponent c,FVector origin,out FVector point){point=origin;return true;}
+ private bool Grab(UVRSharpGrabbable g,FVector p,FVector n,UPrimitiveComponent c,UVRSharpHandPose pose){Attached=pose;return true;}
+ public bool TryGrabAtPose(UVRSharpGrabbable grabbable,UVRSharpHandPose pose)
+'''
+code += body('public bool TryGrabAtPose(')
+code += ' private bool IsRequestedPoseValid(UVRSharpGrabbable grabbable,UPrimitiveComponent component,UVRSharpHandPose pose)' + body('private bool IsRequestedPoseValid(')
+code += ' private bool TrySelectGrabHit(IList<FHitResult> hits,UVRSharpGrabbable? specificTarget,out FHitResult selected,out UVRSharpGrabbable? grabbable,UPrimitiveComponent? specificComponent=null)' + body('private bool TrySelectGrabHit(')
+code += '''}
+class Program {
+ static void Check(bool result){if(!result)throw new Exception("requested pose contact regression");}
+ static void Main(){
+  var owner=new Owner();var item=new UVRSharpGrabbable{Owner=owner};var hand=new Rig{Item=item,IsLeft=true};
+  var requested=new UPrimitiveComponent{Owner=owner};var sibling=new UPrimitiveComponent{Owner=owner};
+  var pose=new UVRSharpHandPose{Owner=owner,TargetComponent=requested};
+  FHitResult Hit(UPrimitiveComponent c,double x)=>new(){Component=new(){Object=c},ImpactPoint=new(){X=x}};
+  hand.targetHitResults=[Hit(sibling,1),Hit(requested,11)];Check(!hand.TryGrabAtPose(item,pose));
+  hand.targetHitResults.Add(Hit(requested,7));Check(hand.TryGrabAtPose(item,pose)&&hand.Attached==pose);
+  pose.DisableLeftHand=true;Check(!hand.TryGrabAtPose(item,pose));pose.DisableLeftHand=false;
+  pose.Owner=new Owner();Check(!hand.TryGrabAtPose(item,pose));pose.Owner=owner;
+  pose.WorldLocation=new(){X=double.NaN};Check(!hand.TryGrabAtPose(item,pose));pose.WorldLocation=default;
+  hand.IsGrabbing=true;Check(!hand.TryGrabAtPose(item,pose));
+  Console.WriteLine("Requested pose: exact local collider, side, owner and already-held guards passed.");
+ }
+}
+'''
+with tempfile.TemporaryDirectory(prefix="vrsharp-requested-pose-") as d:
+ p=Path(d)
+ (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project>')
+ (p/"Program.cs").write_text(code)
+ subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)

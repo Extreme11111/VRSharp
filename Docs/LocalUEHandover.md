@@ -136,3 +136,8 @@ UE5.7/UnrealSharp0.1宿主生成Glue并编译。在/VRSharp/Maps/VRSharpDemo测�
 ## PR #8 道具原地松手配置（2026-11-05）
 `Script/ManagedVRSharp/Core/VRSharpGrabbable.cs` 新增 `DropWithoutMomentum`。在道具蓝图的 Grabbable 组件开启，配合启用了 Simulate Physics 的单刚体 Static Mesh 和原有可抓碰撞设置。最后一只手解除焊接后，在 Released 通知前清零该手对应组件根刚体的线速度和角速度。重力和碰撞仍参与后续物理步。多组件道具仅处理最后释放的那个 Primitive。默认关闭，沿用宿主物理速度。无效组件或未模拟物理时跳过。
 UE5.7/UnrealSharp0.1 先生成 Glue 并编译，确认 `SetPhysicsAngularVelocityInRadians` 绑定。复制两个相同道具到桌面测试地图，分别打开和关闭此选项。在移动和转动中松开，比较 Released 当帧速度，打开的应归零后自然下落。双手先放一只不清速，最终放开才清速。用桌面锁存抓握和 OpenXR 各走一遍。验证切换组件、无物理对象和对象销毁时的行为，检查托管测试使用的原生调用替身与 Chaos 实际脱焊结果。完整 UE 编译、PIE 和头显待验。
+
+## PR #8 指定特殊抓点的测试入口（2026-11-05）
+`Script/ManagedVRSharp/Core/VRSharpHand.cs` 的 `TryGrabAtPose(Grabbable, HandPose)` 和 `VRSharpDesktopTestPawn.cs` 的 `GrabActiveHandAtPose` 提供同一套抓点指定入口。将两个 HandPose 加到同一测试道具蓝图，分别设置同一或不同的 `TargetComponent`，设置明显不同的手掌姿势和 AnimationKey。仅接受与 Grabbable 同 Actor 的组件引用，并使用当前抓球、射线、碰撞查询及手别限制。指定失败返回 false。普通抓取仍按配置选择姿势。
+在桌面地图放置道具，给测试 Widget 或关卡蓝图分别添加两个按钮，调用 `GrabActiveHandAtPose` 并打印返回值。成功后读取 `GetActiveGrabPose`，应等于传入组件，即使另一个抓点优先级更高。通过原 `ReleaseActiveHand` 放下，检查淡出与扳机恢复。切手后检查手别禁用。将指定碰撞体移出手的抓取范围，同时保留近处兄弟碰撞体，预期 false 且无成功抓取事件。通过 `TryGrabAtPose` 可用同一测试步骤验证 XR 手。
+已用原生替身测试指定入口和接触过滤。完整 UE 编译、PIE、碰撞查询和头显待验。

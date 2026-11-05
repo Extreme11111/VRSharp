@@ -234,6 +234,10 @@ public partial class AVRSharpDesktopTestPawn : APawn
     public bool GrabActiveHand()
         => ActiveHand is { } hand && SystemLibrary.IsValid(hand) && hand.TryGrab();
     [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool GrabActiveHandAtPose(UVRSharpGrabbable grabbable, UVRSharpHandPose pose)
+        => ActiveHand is { } hand && SystemLibrary.IsValid(hand) && hand.TryGrabAtPose(grabbable, pose);
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
     public void ReleaseActiveHand()
     {
         if (ActiveHand is { } hand && SystemLibrary.IsValid(hand)) hand.Release();
