@@ -806,25 +806,37 @@ public partial class AVRSharpHand : AActor
         if (grabbable is not null && SystemLibrary.IsValid(grabbable))
             grabbable.CallOnBeforeRelease();
 
-        grabbable?.Detach(this);
+        // 回调可能销毁原对象，不能仅用 CLR null 判断原生对象生命周期。
+        if (grabbable is not null && SystemLibrary.IsValid(grabbable))
+            grabbable.Detach(this);
+        else
+        {
+            DetachFromActor(EDetachmentRule.KeepWorld, EDetachmentRule.KeepWorld, EDetachmentRule.KeepWorld);
+            IsGrabbing = false;
+            GrabbedObject = null;
+        }
 
         // 松开抓握时，手指回到张开（空手时再按原有输入逻辑调整）
         var exitedPose = activeGrabPose;
         activeGrabPose = null;
-        poseExiting = animationPose is not null;
-        if (poseExiting && (!float.IsFinite(animationPose!.ExitBlendSeconds) || animationPose.ExitBlendSeconds <= 0))
-        { animationPose = null; poseBlendWeight = 0; poseExiting = false; }
+        var visualPose = GetAnimationGrabPose();
+        poseExiting = visualPose is not null && float.IsFinite(visualPose.ExitBlendSeconds) && visualPose.ExitBlendSeconds > 0;
+        if (!poseExiting)
+        {
+            animationPose = null;
+            poseBlendWeight = 0;
+        }
         activePoseTrigger = 0;
         useAuthoredFingerWeights = false;
         useTriggerBlend = false;
         SetAllAnimationWeights(0f);
-        if (exitedPose is not null) GrabPoseExited?.Invoke(this, exitedPose);
+        if (exitedPose is not null && SystemLibrary.IsValid(exitedPose)) GrabPoseExited?.Invoke(this, exitedPose);
 
         OnAfterRelease?.Invoke(grabbable);
         if (grabbable is not null && SystemLibrary.IsValid(grabbable))
             grabbable.CallOnAfterRelease();
 
-        HandRigidbody!.SimulatePhysics = true;
+        if (HandRigidbody is { } body && SystemLibrary.IsValid(body)) body.SimulatePhysics = true;
     }
 
     /// <summary>

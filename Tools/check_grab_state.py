@@ -89,3 +89,65 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-grab-check-") as d:
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>')
  (p/"Program.cs").write_text(code+members+method("public void Attach(")+method("public void Detach(")+method("internal void NotifyGrabTrigger(")+method("private void SetTriggerHandActive(")+tests)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
+
+# The real hand release method must recover even when a callback destroys its target.
+s = (root / "Script/ManagedVRSharp/Core/VRSharpHand.cs").read_text()
+release_code = '''using System;
+enum EDetachmentRule { KeepWorld }
+class Native { public bool Valid=true; }
+class UVRSharpHandPose : Native {
+ public float ExitBlendSeconds=>Valid?.2f:throw new Exception("invalid pose read");
+}
+class Body : Native { public bool SimulatePhysics; }
+static class SystemLibrary { public static bool IsValid(Native value)=>value.Valid; }
+class UVRSharpGrabbable : Native {
+ public Action? Before;
+ public int Detaches,After;
+ public void CallOnBeforeRelease(){if(!Valid)throw new Exception("invalid before callback");Before?.Invoke();}
+ public void CallOnAfterRelease(){if(!Valid)throw new Exception("invalid after callback");After++;}
+ public void Detach(AVRSharpHand hand){if(!Valid)throw new Exception("invalid native detach");Detaches++;hand.IsGrabbing=false;hand.GrabbedObject=null;}
+}
+class AVRSharpHand {
+ public bool IsGrabbing=true,poseExiting;
+ public bool useAuthoredFingerWeights=true,useTriggerBlend=true;
+ public float activePoseTrigger=.8f,poseBlendWeight=1,Weights=1;
+ public UVRSharpGrabbable? GrabbedObject=new();
+ public UVRSharpHandPose? activeGrabPose,animationPose;
+ public Body? HandRigidbody=new();
+ public int NativeDetaches;
+ public event Action<UVRSharpGrabbable?>? OnBeforeRelease,OnAfterRelease;
+ public event Action<AVRSharpHand,UVRSharpHandPose>? GrabPoseExited;
+ public void SetGrabTrigger(float value){}
+ public void SetAllAnimationWeights(float value){Weights=value;}
+ public UVRSharpHandPose? GetAnimationGrabPose()=>animationPose is {Valid:true}?animationPose:null;
+ public void DetachFromActor(EDetachmentRule a,EDetachmentRule b,EDetachmentRule c){NativeDetaches++;}
+'''
+release_tests = '''}
+class Program {
+ static void Check(bool ok){if(!ok)throw new Exception("hand release recovery regression");}
+ static void Main(){
+  foreach(int invalidation in new[]{0,1,2}){
+   var hand=new AVRSharpHand();var item=hand.GrabbedObject!;var pose=new UVRSharpHandPose();
+   hand.animationPose=hand.activeGrabPose=pose;int exited=0,after=0;
+   hand.GrabPoseExited+=(h,p)=>exited++;hand.OnAfterRelease+=g=>after++;
+   void Destroy(){item.Valid=false;pose.Valid=false;}
+   if(invalidation==0)Destroy();
+   if(invalidation==1)hand.OnBeforeRelease+=g=>Destroy();
+   if(invalidation==2)item.Before=Destroy;
+   hand.Release();hand.Release();
+   Check(!hand.IsGrabbing&&hand.GrabbedObject==null&&hand.NativeDetaches==1&&item.Detaches==0&&item.After==0);
+   Check(hand.animationPose==null&&hand.activeGrabPose==null&&!hand.poseExiting&&exited==0&&after==1);
+   Check(hand.activePoseTrigger==0&&hand.Weights==0&&!hand.useAuthoredFingerWeights&&!hand.useTriggerBlend&&hand.HandRigidbody!.SimulatePhysics);
+  }
+  var normal=new AVRSharpHand();var valid=normal.GrabbedObject!;normal.animationPose=normal.activeGrabPose=new();
+  normal.Release();Check(valid.Detaches==1&&valid.After==1&&normal.NativeDetaches==0&&normal.poseExiting);
+  var missing=new AVRSharpHand{GrabbedObject=null,HandRigidbody=null};missing.Release();Check(!missing.IsGrabbing&&missing.NativeDetaches==1);
+  Console.WriteLine("Hand release recovery: stale/null target, both callback destruction paths and valid pose exit passed.");
+ }
+}
+'''
+with tempfile.TemporaryDirectory(prefix="vrsharp-hand-release-") as d:
+ p=Path(d)
+ (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project>')
+ (p/"Program.cs").write_text(release_code+method("public void Release()")+release_tests)
+ subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)

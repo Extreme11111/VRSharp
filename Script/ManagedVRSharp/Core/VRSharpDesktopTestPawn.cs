@@ -417,7 +417,7 @@ public partial class AVRSharpDesktopTestPawn : APawn
     private static void DestroySpawnedHand(AVRSharpHand? hand)
     {
         if (hand is null || !SystemLibrary.IsValid(hand)) return;
-        if (hand.GrabbedObject is { } item && SystemLibrary.IsValid(item)) hand.Release();
+        hand.Release();
         if (SystemLibrary.IsValid(hand)) hand.DestroyActor();
     }
 

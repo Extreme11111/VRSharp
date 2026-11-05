@@ -117,3 +117,6 @@ Combined math, pose/trigger, desktop grip, event state and 192 admission policy 
 - 2026-11-05 PR #8 增加 Grabbable 扳机开关状态及上下文事件。使用按下和松开阈值、双手独立记账、最后一手松开/放下关闭，复用桌面与 XR 扳机路径。独立数学及托管生命周期回归覆盖双手、滞回和上下文拒绝。手电筒接线与 UE 待验项见 LocalUEHandover。
 
 - 2026-11-06 PR #8 为桌面 Pawn 提供可接入测试界面的配置报告和输入绑定查询，覆盖手生成失败、重复动作及缺失引用。托管报告回归和两个独立数学检查用于验证。蓝图显示接线及实际输入验收见 LocalUEHandover，UE 编译、PIE 和头显待验。
+- 2026-11-01: Draft release-lifecycle fix on cloud/release-invalid-grabbable. Recheck native validity after release callbacks; when grabbable is null/destroyed, detach the surviving hand and clear its grab state. Valid objects retain the existing LIFO detach path. Scope excludes callback reentrancy, callback exceptions and multi-component ownership. UE build/PIE/headset NOT RUN; accept only after testing normal release, destroy-on-before-release, missing cached object, repeated release and subsequent re-grab on both hands. Standalone math does not exercise this engine path; CI results must not be treated as runtime proof. LFS upload credentials remain unavailable, no assets modified.
+
+- 2026-11-06 PR #8 整合 PR #2。持物释放回调中销毁道具时恢复手的抓放和动画状态，桌面自建手退出复用该路径。托管回归覆盖已销毁、两类回调中销毁及正常淡出。测试场景和 UE 待验项见 LocalUEHandover。

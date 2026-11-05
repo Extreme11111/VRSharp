@@ -160,3 +160,7 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 ## PR #8 桌面测试地图配置自检（2026-11-06）
 `Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs` 提供 `GetDesktopSetupIssues` 和 `IsDesktopInputBound`。在桌面 Pawn 蓝图 BeginPlay 父类执行后调用前者，返回字符串非空时接 Print String 或调试 Widget。也可加一个检查按钮按需刷新，不必每帧调用。报告列出缺失或失效的相机、目标、手实例/类和必需 Action，并指出共享手/目标或重复 Action。手生成后会报告实际不可用的一侧。`IsDesktopInputBound` 可在占用后的下一帧或按钮上查询当前 Enhanced Input 组件绑定状态。
 本地验收先编译 Glue。在无头显 PIE 中，故意清空 `DesktopGrip` 并将 `DesktopLook` 指向 `DesktopMove`，应同时报告缺失与重复。修复后运行，应得到空报告，键鼠映射生效后绑定查询为 true。再移除一侧手类和实例，应定位对应手。留空可选 `DesktopMappingContext` 时可由宿主管理，不报缺项。报告检查引用及绑定状态，映射内键位、Action 轴类型、手骨骼与碰撞需按前节另行验收。托管测试使用原生替身，完整 UE 编译、PIE、头显尚未验证。
+
+## PR #8 整合 PR #2 的失效道具释放恢复（2026-11-06）
+`Script/ManagedVRSharp/Core/VRSharpHand.cs` 的 `Release()` 在释放回调后重新校验 Grabbable。若已销毁或缺失，手以 KeepWorld 解除附着并清空持有状态，归零扳机和手指目标。失效的姿势跳过退出通知及淡出，仍有效的姿势走原淡出。旧的手侧 OnAfterRelease 继续触发，监听者访问旧对象前应检查有效性。无法通知已销毁对象的 Released。`VRSharpDesktopTestPawn.cs` 退出时调用相同恢复流程再销毁自建手。
+无需新增资产配置。用已有桌面测试地图和一件特殊姿势道具，分别在手和 Grabbable 的 C# BeforeRelease 回调销毁该道具 Actor。放下后应无原生无效引用异常，IsGrabbing 为 false，姿势和扳机清空，手能接着抓另一件物体。再以普通释放确认事件、工具开关与淡出保持。持物时销毁桌面 Pawn，验证自建手退出清理。回归使用原生替身测试真实 Release 方法，UE 编译、PIE、Chaos 脱焊和头显仍待验。
