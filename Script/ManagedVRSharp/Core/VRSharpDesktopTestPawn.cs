@@ -30,6 +30,19 @@ public partial class AVRSharpDesktopTestPawn : APawn
     public partial UInputAction? DesktopHandRotate { get; set; }
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial UInputAction? DesktopToggleGrip { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? DesktopFingers { get; set; }
+    private FVector fingerInput;
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public void SetEmptyHandInput(float thumb, float index, float grasp)
+        => fingerInput = new FVector(Math.Max(Axis(thumb),0),Math.Max(Axis(index),0),Math.Max(Axis(grasp),0));
+    [UFunction]
+    private void OnDesktopFingers(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    { var v=value.GetAxis3D(); SetEmptyHandInput((float)v.X,(float)v.Y,(float)v.Z); }
+    [UFunction]
+    private void OnDesktopFingersStop(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    { SetEmptyHandInput(0,0,0); }
+
     private UEnhancedInputComponent? boundDesktopInput;
     private AVRSharpHand? gripInputHand;
     private UVRSharpGrabbable? gripInputObject;
@@ -74,6 +87,12 @@ public partial class AVRSharpDesktopTestPawn : APawn
         }
         if (DesktopToggleGrip is not null)
             input.BindAction(DesktopToggleGrip, ETriggerEvent.Started, OnDesktopToggleGrip);
+        if (DesktopFingers is not null)
+        {
+            input.BindAction(DesktopFingers, ETriggerEvent.Triggered, OnDesktopFingers);
+            input.BindAction(DesktopFingers, ETriggerEvent.Completed, OnDesktopFingersStop);
+            input.BindAction(DesktopFingers, ETriggerEvent.Canceled, OnDesktopFingersStop);
+        }
         boundDesktopInput = input;
         return true;
     }
@@ -207,6 +226,8 @@ public partial class AVRSharpDesktopTestPawn : APawn
         if (ActiveHand is { } old && SystemLibrary.IsValid(old)) old.SetGrabTrigger(0);
         trigger = 0;
         handInput = handRotateInput = FVector.Zero;
+        if (ActiveHand is { } previous && SystemLibrary.IsValid(previous)) previous.ClearFingerInput();
+        fingerInput = FVector.Zero;
         ControlLeftHand = left;
     }
     [UFunction(FunctionFlags.BlueprintCallable)]
@@ -227,6 +248,9 @@ public partial class AVRSharpDesktopTestPawn : APawn
     public void ResetDesktopInput()
     {
         ReleaseDesktopGrip();
+        fingerInput = FVector.Zero;
+        if (LeftHand is { } lh && SystemLibrary.IsValid(lh)) lh.ClearFingerInput();
+        if (RightHand is { } rh && SystemLibrary.IsValid(rh)) rh.ClearFingerInput();
         moveInput = handInput = handRotateInput = FVector.Zero;
         trigger = 0;
         if (LeftHand is { } left && SystemLibrary.IsValid(left)) left.SetGrabTrigger(0);
@@ -268,7 +292,11 @@ public partial class AVRSharpDesktopTestPawn : APawn
         }
         Drive(LeftHand,LeftTarget,dt);
         Drive(RightHand,RightTarget,dt);
-        if (ActiveHand is { } active && SystemLibrary.IsValid(active)) active.SetGrabTrigger(trigger);
+        if (ActiveHand is { } active && SystemLibrary.IsValid(active))
+        {
+            if (active.IsGrabbing) active.SetGrabTrigger(trigger);
+            else active.SetFingerInput((float)fingerInput.X, Math.Max((float)fingerInput.Y,trigger), (float)fingerInput.Z);
+        }
     }
     private static void Drive(AVRSharpHand? hand,USceneComponent? target,float dt)
     {

@@ -113,3 +113,17 @@ Core/VRSharpGrabbable.cs新增GrabTriggerChanged(hand,item,primitive,value)，�
 Core/VRSharpHandPose.cs新增EnterBlendSeconds/ExitBlendSeconds，秒，默认0兼容瞬切。Core/VRSharpHand.cs在成功抓取后启动视觉生命周期，Tick推进0..1权重；放下立即清理逻辑GetActiveGrabPose/触发旧退出事件，但GetAnimationGrabPose保留退出姿势到淡出完成，IsGrabPoseExiting区分退出。无效资源立即清理；淡出中抓新姿势立即换新姿势并从其进入权重开始，不是两套专用动画交叉混合。
 本地AnimBP Event Blueprint Update Animation：读取手GetAnimationGrabPose并检查有效→缓存AnimationKey、GetGrabPoseBlendWeight、IsGrabPoseExiting；无效则权重0。AnimGraph以原有动态手指图为Base，按AnimationKey选择左右手匹配的专用Sequence Player或可复用姿势子图（如ToolGrip），通过Blend Poses by float的Alpha接上述权重；专用图内部用GetGrabPoseTrigger混合ToolGrip/ToolPress动画。不要用GetActiveGrabPose为空作为整个专用图的立即关闭条件，否则跳过淡出。退出期间扳机归零，逻辑Released仍即时发生，不延迟物理释放。
 测试资产建议/VRSharp/Tests/Animations/ToolGrip_L、ToolGrip_R、ToolPress_L、ToolPress_R，须本地制作匹配手骨架；本轮未生成资产。抓点Enter=.15、Exit=.2。验收桌面抓取淡入→持续保持/扳机→放下淡出→恢复动态图；进入中放下、退出中抓另一物体、抓点销毁、左右手独立、30/60/120Hz。托管测试直接抽取生产进入/推进方法，原生有效性用替身；未验证完整UE编译、AnimBP节点/资产兼容、PIE、视觉质量与头显。
+# UE交接：模拟手指输入
+
+分支 cloud/manual-finger-input；AVRSharpHand.SetFingerInput(thumb,index,grasp) 位于 Script/ManagedVRSharp/Core/VRSharpHand.cs。三个轴为0..1；非有限样本保留前值；正在抓取时返回false并不覆盖接触反馈。此入口目前只支持空手，不代表已实现抓握期间扳机姿势混合或完整PC/OpenXR适配器。
+
+UE5.7/UnrealSharp0.1宿主生成Glue并编译。在/VRSharp/Maps/VRSharpDemo测试副本，通过临时UMG三滑条或OpenXR轴值每帧调用每手SetFingerInput；使用该入口时不要同时驱动原Touched/Clicked动画回调，否则同帧后写入者覆盖前者。姿态跟随可使用现有UpdateTracking，抓放使用TryGrab/Release，输入映射需本地建立，未修改原资产。
+
+验收：0/.5/1连续输入平滑驱动对应拇指/食指/三指；越界钳制；NaN/Infinity不污染目标；抓取时调用返回false且接触动画继续；释放后可重新驱动。左右手分别测试，保存蓝图重开确认节点可用。正常旧输入绑定应保持。UE编译、蓝图、PIE和头显均待执行；独立测试仅覆盖数值归一化。
+
+- 2026-11-03 输入所有权更新（5db78bd）：成功SetFingerInput后，旧Touched/Clicked/Released动画回调不再覆盖外部目标；新增BlueprintCallable ClearFingerInput，在适配器断开、UI关闭或切换回旧输入时调用。空手清零目标；抓取中仅解除外部所有权，保留接触姿势。不主动释放物体，也不自动检测设备断开。此规则取代此前“同帧后写入者覆盖”的接线警告。待UE验收：外部输入后触发全部旧动画事件，目标应保持；Clear后空手张开且旧输入事件恢复；抓取中Clear不改变接触姿势；连续Clear幂等；左右手所有权独立。完整UE编译/PIE/头显与此状态切换路径未验证，数值测试不能替代。
+
+## PR #8 + PR #5 桌面空手输入集成（2026-11-05）
+合并manual-finger-input到desktop-test-pawn，保留事件、准入和动画淡出逻辑。Core/VRSharpDesktopTestPawn.cs新增可选DesktopFingers Axis3D，XYZ=thumb/index/grasp；SetEmptyHandInput可供UI直接调用。创建IA_DesktopFingers，Z/X/C分别映射X/Y/Z正轴，使用Swizzle将一维值移至相应轴；Triggered持续赋值，Completed/Canceled清零。首次BindDesktopInput成功前赋动作。原DesktopTrigger空手时同时控制食指，取两输入最大值；持物时沿用扳机业务/动画。无需XR。
+切手清除旧手外部输入并清零模拟轴；ResetDesktopInput清理两手；抓握期间SetFingerInput拒绝覆盖接触/专用姿势。松开后下一Tick恢复当前桌面空手输入。空手外部输入会阻止旧VR空手回调覆盖，ClearFingerInput交还旧输入。验收：三轴单独/组合闭合、松键张开、按住手指轴抓取专用工具→扳机→放下恢复当前输入、切手不残留、失焦调用Reset、两手持物不受空手轴影响。
+生产FingerInput/手方法隔离回归及数学检查用于验证托管逻辑；不覆盖完整Pawn、原生输入、骨骼动画和接触物理。UE编译、PIE、头显未验证。二进制资产未编辑。

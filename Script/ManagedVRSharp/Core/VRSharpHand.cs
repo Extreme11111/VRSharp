@@ -135,6 +135,7 @@ public partial class AVRSharpHand : AActor
     private bool useAuthoredFingerWeights;
     private bool useTriggerBlend;
     private float authoredIndexWeight, triggerIndexWeight;
+    private bool externalFingerInput;
 
     #endregion
 
@@ -392,7 +393,7 @@ public partial class AVRSharpHand : AActor
     [UFunction]
     private void ThumbTouchedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
     {
-        if (IsGrabbing) return;
+        if (IsGrabbing || externalFingerInput) return;
         if (targetThumbWeight != 1f)
             targetThumbWeight = 0.5f;
     }
@@ -400,42 +401,42 @@ public partial class AVRSharpHand : AActor
     [UFunction]
     private void ThumbClickedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
     {
-        if (IsGrabbing) return;
+        if (IsGrabbing || externalFingerInput) return;
         targetThumbWeight = 1f;
     }
 
     [UFunction]
     private void IndexClickedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
     {
-        if (IsGrabbing) return;
+        if (IsGrabbing || externalFingerInput) return;
         targetIndexWeight = 1f;
     }
 
     [UFunction]
     private void GraspClickedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
     {
-        if (IsGrabbing) return;
+        if (IsGrabbing || externalFingerInput) return;
         targetGraspWeight = 1f;
     }
 
     [UFunction]
     private void ThumbReleasedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
     {
-        if (IsGrabbing) return;
+        if (IsGrabbing || externalFingerInput) return;
         targetThumbWeight = 0f;
     }
 
     [UFunction]
     private void IndexReleasedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
     {
-        if (IsGrabbing) return;
+        if (IsGrabbing || externalFingerInput) return;
         targetIndexWeight = 0f;
     }
 
     [UFunction]
     private void GraspReleasedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
     {
-        if (IsGrabbing) return;
+        if (IsGrabbing || externalFingerInput) return;
         targetGraspWeight = 0f;
     }
 
@@ -831,6 +832,27 @@ public partial class AVRSharpHand : AActor
             if (SystemLibrary.IsValid(item)) item.NotifyGrabTrigger(this, component, activePoseTrigger);
         }
         return true;
+    }
+
+
+    /// <summary>空手模拟输入入口；PC滑条与OpenXR模拟轴共用。抓取接触期间返回false。</summary>
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool SetFingerInput(float thumb, float index, float grasp)
+    {
+        if (IsGrabbing) return false;
+        externalFingerInput = true;
+        targetThumbWeight = FingerInput.Normalize(thumb, targetThumbWeight);
+        targetIndexWeight = FingerInput.Normalize(index, targetIndexWeight);
+        targetGraspWeight = FingerInput.Normalize(grasp, targetGraspWeight);
+        return true;
+    }
+
+    /// <summary>适配器断开时交还旧输入；抓握期间不覆盖接触姿势。</summary>
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public void ClearFingerInput()
+    {
+        externalFingerInput = false;
+        if (!IsGrabbing) SetAllAnimationWeights(0f);
     }
 
     private void SetAllAnimationWeights(float weight)
