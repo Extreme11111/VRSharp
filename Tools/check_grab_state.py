@@ -8,7 +8,7 @@ def method(sig):
  while depth:
   depth+=(s[end]=="{")-(s[end]=="}");end+=1
  return s[start:end]
-members="\n".join(l for l in s.splitlines() if any(x in l for x in ["public UPrimitiveComponent? GrabbedComponent {","public int GrabCount =>","public bool IsGrabbed =>","public event Action<AVRSharpHand","public bool IsHeldBy(","public AVRSharpHand[] GetGrabbingHands()"]))
+members="\n".join(l for l in s.splitlines() if any(x in l for x in ["public UPrimitiveComponent? GrabbedComponent {","public int GrabCount =>","public bool IsGrabbed =>","public bool IsTriggerActive =>","public event Action<AVRSharpHand","public bool IsHeldBy(","public AVRSharpHand[] GetGrabbingHands()"]))
 code="""using System; using System.Linq; using System.Collections.Generic;
 enum EAttachmentRule {KeepWorld} enum EDetachmentRule {KeepWorld}
 class UPrimitiveComponent {
@@ -30,6 +30,9 @@ class AVRSharpHand {
 }
 class UVRSharpGrabbable {
  public bool DropWithoutMomentum;
+ public float TriggerPressThreshold,TriggerReleaseThreshold;
+ private readonly HashSet<AVRSharpHand> activeTriggerHands=new();
+ public UPrimitiveComponent? GetHeldComponent(AVRSharpHand hand)=>components.TryGetValue(hand,out var c)&&c.Valid?c:null;
  public bool AdmissionAllowed=true; public bool CanGrab(AVRSharpHand hand)=>AdmissionAllowed;
  private readonly List<AVRSharpHand> hands=new();
  private readonly Dictionary<AVRSharpHand,UPrimitiveComponent> components=new();
@@ -63,11 +66,26 @@ class Program {
  Check(b.Attaches>1&&b.Detaches>0);
 
  c.Valid=false;g.Attach(a,c);Check(entered==2);
+ var tool=new UVRSharpGrabbable{TriggerPressThreshold=.75f,TriggerReleaseThreshold=.55f};
+ var grip=new UPrimitiveComponent();var secondGrip=new UPrimitiveComponent();
+ var activation=new List<(AVRSharpHand, UPrimitiveComponent, bool)>();
+ tool.TriggerActivationChanged+=(h,o,p,v)=>{Check(o==tool&&o.IsTriggerActive==v);activation.Add((h,p,v));};
+ tool.NotifyGrabTrigger(a,grip,1);Check(!tool.IsTriggerActive);
+ tool.Attach(a,grip);tool.Attach(b,secondGrip);
+ tool.NotifyGrabTrigger(a,secondGrip,1);Check(!tool.IsTriggerActive);
+ tool.NotifyGrabTrigger(a,grip,.8f);tool.NotifyGrabTrigger(a,grip,.6f);Check(tool.IsTriggerActive&&activation.Count==1);
+ tool.NotifyGrabTrigger(b,secondGrip,.9f);tool.NotifyGrabTrigger(a,grip,0);tool.Detach(a);
+ Check(tool.IsTriggerActive&&activation.Count==1);
+ tool.Detach(b);Check(!tool.IsTriggerActive&&activation.SequenceEqual(new[]{(a,grip,true),(b,secondGrip,false)}));
+ tool.Attach(b,secondGrip);tool.NotifyGrabTrigger(b,secondGrip,.6f);Check(!tool.IsTriggerActive);
+ tool.NotifyGrabTrigger(b,secondGrip,.8f);tool.NotifyGrabTrigger(b,secondGrip,.55f);Check(!tool.IsTriggerActive&&activation.Count==4);
+ tool.Detach(b);Check(activation.Count==4);
+ Console.WriteLine("Tool trigger activation: hysteresis, per-hand aggregation, context rejection, release and regrab passed.");
  Console.WriteLine("Production grab subset: contextual events, state, failed/duplicate attachment and dual-hand release, and opt-in momentum reset passed.");
  }
 }"""
 with tempfile.TemporaryDirectory(prefix="vrsharp-grab-check-") as d:
  p=Path(d)
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>')
- (p/"Program.cs").write_text(code+members+method("public void Attach(")+method("public void Detach(")+tests)
+ (p/"Program.cs").write_text(code+members+method("public void Attach(")+method("public void Detach(")+method("internal void NotifyGrabTrigger(")+method("private void SetTriggerHandActive(")+tests)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)

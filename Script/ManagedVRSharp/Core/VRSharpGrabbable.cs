@@ -44,12 +44,41 @@ public partial class UVRSharpGrabbable : UActorComponent
 
     #region  抓握事件
 
+    // A zero press threshold disables activation for existing assets.
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial float TriggerPressThreshold { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial float TriggerReleaseThreshold { get; set; }
+
+    private readonly HashSet<AVRSharpHand> activeTriggerHands = new();
+    public bool IsTriggerActive => activeTriggerHands.Count > 0;
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool GetIsTriggerActive() => IsTriggerActive;
+
+    public event Action<AVRSharpHand, UVRSharpGrabbable, UPrimitiveComponent, bool>? TriggerActivationChanged;
+
     public event Action<AVRSharpHand, UVRSharpGrabbable, UPrimitiveComponent, float>? GrabTriggerChanged;
 
     internal void NotifyGrabTrigger(AVRSharpHand hand, UPrimitiveComponent component, float value)
     {
         if (!float.IsFinite(value) || !IsHeldBy(hand) || GetHeldComponent(hand) != component) return;
+        float press = TriggerPressThreshold;
+        float release = TriggerReleaseThreshold;
+        bool enabled = float.IsFinite(press) && float.IsFinite(release) &&
+            press > 0 && press <= 1 && release >= 0 && release < press;
+        bool active = enabled && (activeTriggerHands.Contains(hand) ? value > release : value >= press);
+        SetTriggerHandActive(hand, component, active);
         GrabTriggerChanged?.Invoke(hand, this, component, value);
+    }
+
+    private void SetTriggerHandActive(AVRSharpHand hand, UPrimitiveComponent component, bool active)
+    {
+        bool wasActive = IsTriggerActive;
+        if (active) activeTriggerHands.Add(hand);
+        else activeTriggerHands.Remove(hand);
+        if (wasActive != IsTriggerActive)
+            TriggerActivationChanged?.Invoke(hand, this, component, IsTriggerActive);
     }
 
     public event Action<UVRSharpGrabbable?>? OnBeforeGrab;
@@ -249,6 +278,7 @@ public partial class UVRSharpGrabbable : UActorComponent
                 releasedComponent.SetPhysicsAngularVelocityInRadians(default, false, default);
             }
         }
+        SetTriggerHandActive(hand, releasedComponent, false);
         hand.NotifyReleased(this, releasedComponent);
         Released?.Invoke(hand, this, releasedComponent);
     }
