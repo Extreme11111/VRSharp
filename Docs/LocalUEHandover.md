@@ -141,3 +141,8 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，确认 `SetPhysicsAngularVelocit
 `Script/ManagedVRSharp/Core/VRSharpHand.cs` 的 `TryGrabAtPose(Grabbable, HandPose)` 和 `VRSharpDesktopTestPawn.cs` 的 `GrabActiveHandAtPose` 提供同一套抓点指定入口。将两个 HandPose 加到同一测试道具蓝图，分别设置同一或不同的 `TargetComponent`，设置明显不同的手掌姿势和 AnimationKey。仅接受与 Grabbable 同 Actor 的组件引用，并使用当前抓球、射线、碰撞查询及手别限制。指定失败返回 false。普通抓取仍按配置选择姿势。
 在桌面地图放置道具，给测试 Widget 或关卡蓝图分别添加两个按钮，调用 `GrabActiveHandAtPose` 并打印返回值。成功后读取 `GetActiveGrabPose`，应等于传入组件，即使另一个抓点优先级更高。通过原 `ReleaseActiveHand` 放下，检查淡出与扳机恢复。切手后检查手别禁用。将指定碰撞体移出手的抓取范围，同时保留近处兄弟碰撞体，预期 false 且无成功抓取事件。通过 `TryGrabAtPose` 可用同一测试步骤验证 XR 手。
 已用原生替身测试指定入口和接触过滤。完整 UE 编译、PIE、碰撞查询和头显待验。
+
+## PR #8 桌面键鼠映射自动接入（2026-11-05）
+在 `Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs` 对应桌面 Pawn 蓝图中，将此前创建的 `IMC_VRSharpDesktop` 指派给 `DesktopMappingContext`，`DesktopMappingPriority` 默认 0。宿主测试地图以 Auto Possess Player 0 或 GameMode Default Pawn Class 占用该 Pawn。Action 属性、左右手引用与相机目标照原交接配置。启用后可移除关卡蓝图中为本 Pawn 手动 AddMappingContext 的节点。留空继续使用宿主管理的输入映射。
+Pawn Tick 检测本地 PlayerController 并向其 Enhanced Input 子系统添加映射。控制器丢失、配置更换或 EndPlay 时移除本 Pawn 添加的映射并清理桌面输入，按住型抓握随 ResetDesktopInput 清理，锁存型抓握保持原设计。若同一映射由宿主事先添加，Pawn 不更改其优先级且不移除。请为桌面 Pawn 使用专用映射，避免两个对象同时管理同一资产。优先级在添加时读取。
+验收先生成 UE5.7/UnrealSharp0.1 Glue，核对 GetController、EndPlay、HasMappingContext 和 RemoveMappingContext 绑定。在无头显的普通 PIE 占用 Pawn，键鼠移动、左右手切换、抓放和扳机应可用。带着按住型抓握切换到另一个 Pawn，确认释放和轴归零，桌面映射消失且其他映射保持。重新占用并检查一键一次事件。预先由宿主添加同一映射后退出桌面 Pawn，应保留该映射。托管测试覆盖映射所有权和生命周期，完整 UE 编译、PIE、头显未验证。

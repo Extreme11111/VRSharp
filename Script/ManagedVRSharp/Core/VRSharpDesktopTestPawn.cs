@@ -43,6 +43,56 @@ public partial class AVRSharpDesktopTestPawn : APawn
     private void OnDesktopFingersStop(FInputActionValue value, float elapsed, float triggered, UInputAction action)
     { SetEmptyHandInput(0,0,0); }
 
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputMappingContext? DesktopMappingContext { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial int DesktopMappingPriority { get; set; }
+
+    private APlayerController? mappingController;
+    private UEnhancedInputLocalPlayerSubsystem? mappingSubsystem;
+    private UInputMappingContext? mappedContext;
+    private bool ownsMappingContext;
+
+    private void RefreshDesktopMapping()
+    {
+        var context = DesktopMappingContext;
+        var controller = GetController() as APlayerController;
+        if (controller != mappingController || context != mappedContext)
+            ClearDesktopMapping();
+        if (mappingSubsystem is not null || context is null || controller is null ||
+            !SystemLibrary.IsValid(context) || !SystemLibrary.IsValid(controller) || !controller.IsLocalController()) return;
+        var subsystem = GetLocalPlayerSubsystem<UEnhancedInputLocalPlayerSubsystem>(controller);
+        if (subsystem is null || !SystemLibrary.IsValid(subsystem)) return;
+
+        mappingController = controller;
+        mappingSubsystem = subsystem;
+        mappedContext = context;
+        if (subsystem.HasMappingContext(context, out _)) return;
+        subsystem.AddMappingContext(context, DesktopMappingPriority);
+        ownsMappingContext = true;
+    }
+
+    private void ClearDesktopMapping()
+    {
+        var subsystem = mappingSubsystem;
+        var context = mappedContext;
+        bool remove = ownsMappingContext;
+        mappingController = null;
+        mappingSubsystem = null;
+        mappedContext = null;
+        ownsMappingContext = false;
+        if (remove && subsystem is not null && context is not null &&
+            SystemLibrary.IsValid(subsystem) && SystemLibrary.IsValid(context))
+            subsystem.RemoveMappingContext(context);
+        if (subsystem is not null) ResetDesktopInput();
+    }
+
+    public override void EndPlay(EEndPlayReason endPlayReason)
+    {
+        ClearDesktopMapping();
+        base.EndPlay(endPlayReason);
+    }
+
     private UEnhancedInputComponent? boundDesktopInput;
     private AVRSharpHand? gripInputHand;
     private UVRSharpGrabbable? gripInputObject;
@@ -279,7 +329,9 @@ public partial class AVRSharpDesktopTestPawn : APawn
     public override void Tick(float deltaSeconds)
     {
         base.Tick(deltaSeconds);
+        if (boundDesktopInput is not null && !SystemLibrary.IsValid(boundDesktopInput)) boundDesktopInput = null;
         if (boundDesktopInput is null && InputComponent is UEnhancedInputComponent input) BindDesktopInput(input);
+        if (DesktopMappingContext is not null || mappedContext is not null) RefreshDesktopMapping();
         if (!float.IsFinite(deltaSeconds) || deltaSeconds <= 0) return;
         float dt = Math.Min(deltaSeconds,.1f);
         var movement = VRSharpMathHelper.ClampMagnitude(moveInput,1);

@@ -92,3 +92,61 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-held-trigger-") as d:
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework></PropertyGroup></Project>')
  (p/"Program.cs").write_text(trigger_code+body("public bool SetGrabTrigger(")+trigger_tests)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
+
+# Verify that the Pawn only removes contexts that it installed itself.
+src = (root / "Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs").read_text()
+code = '''using System;
+using System.Collections.Generic;
+class UInputMappingContext {}
+class APlayerController {
+ public bool Local=true;
+ public UEnhancedInputLocalPlayerSubsystem Subsystem=new();
+ public bool IsLocalController()=>Local;
+}
+class UEnhancedInputLocalPlayerSubsystem {
+ public Dictionary<UInputMappingContext,int> Contexts=new();
+ public int Adds,Removes;
+ public bool HasMappingContext(UInputMappingContext context,out int priority)=>Contexts.TryGetValue(context,out priority);
+ public void AddMappingContext(UInputMappingContext context,int priority){Contexts.Add(context,priority);Adds++;}
+ public void RemoveMappingContext(UInputMappingContext context){Contexts.Remove(context);Removes++;}
+}
+static class SystemLibrary {public static bool IsValid(object? x)=>x!=null;}
+class Rig {
+ public UInputMappingContext? DesktopMappingContext;
+ public int DesktopMappingPriority=3;
+ public APlayerController? Controller;
+ private APlayerController? mappingController;
+ private UEnhancedInputLocalPlayerSubsystem? mappingSubsystem;
+ private UInputMappingContext? mappedContext;
+ private bool ownsMappingContext;
+ public int Resets;
+ private void ResetDesktopInput(){Resets++;}
+ private APlayerController? GetController()=>Controller;
+ private T? GetLocalPlayerSubsystem<T>(APlayerController c) where T:class=>c.Subsystem as T;
+ public void RefreshDesktopMapping()
+'''
+code += body('private void RefreshDesktopMapping(')
+code += ' public void ClearDesktopMapping() ' + body('private void ClearDesktopMapping(')
+code += '''}
+class Program {
+ static void Check(bool result){if(!result)throw new Exception("mapping lifecycle regression");}
+ static void Main(){
+  var context=new UInputMappingContext();var a=new APlayerController();var b=new APlayerController();
+  var rig=new Rig{DesktopMappingContext=context};rig.RefreshDesktopMapping();
+  rig.Controller=a;rig.RefreshDesktopMapping();rig.RefreshDesktopMapping();
+  Check(a.Subsystem.Adds==1&&a.Subsystem.Contexts[context]==3);
+  rig.Controller=null;rig.RefreshDesktopMapping();Check(a.Subsystem.Removes==1&&rig.Resets==1);
+  b.Subsystem.Contexts.Add(context,9);rig.Controller=b;rig.RefreshDesktopMapping();rig.ClearDesktopMapping();
+  Check(b.Subsystem.Adds==0&&b.Subsystem.Removes==0&&b.Subsystem.Contexts[context]==9);
+  rig.Controller=a;rig.RefreshDesktopMapping();rig.ClearDesktopMapping();rig.ClearDesktopMapping();
+  Check(a.Subsystem.Adds==2&&a.Subsystem.Removes==2&&rig.Resets==3);
+  a.Local=false;rig.RefreshDesktopMapping();Check(a.Subsystem.Adds==2);
+  Console.WriteLine("Desktop mapping ownership: possession, loss, re-entry, external context and remote controller passed.");
+ }
+}
+'''
+with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-mapping-") as d:
+ p=Path(d)
+ (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project>')
+ (p/"Program.cs").write_text(code)
+ subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
