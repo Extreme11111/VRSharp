@@ -146,3 +146,8 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，确认 `SetPhysicsAngularVelocit
 在 `Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs` 对应桌面 Pawn 蓝图中，将此前创建的 `IMC_VRSharpDesktop` 指派给 `DesktopMappingContext`，`DesktopMappingPriority` 默认 0。宿主测试地图以 Auto Possess Player 0 或 GameMode Default Pawn Class 占用该 Pawn。Action 属性、左右手引用与相机目标照原交接配置。启用后可移除关卡蓝图中为本 Pawn 手动 AddMappingContext 的节点。留空继续使用宿主管理的输入映射。
 Pawn Tick 检测本地 PlayerController 并向其 Enhanced Input 子系统添加映射。控制器丢失、配置更换或 EndPlay 时移除本 Pawn 添加的映射并清理桌面输入，按住型抓握随 ResetDesktopInput 清理，锁存型抓握保持原设计。若同一映射由宿主事先添加，Pawn 不更改其优先级且不移除。请为桌面 Pawn 使用专用映射，避免两个对象同时管理同一资产。优先级在添加时读取。
 验收先生成 UE5.7/UnrealSharp0.1 Glue，核对 GetController、EndPlay、HasMappingContext 和 RemoveMappingContext 绑定。在无头显的普通 PIE 占用 Pawn，键鼠移动、左右手切换、抓放和扳机应可用。带着按住型抓握切换到另一个 Pawn，确认释放和轴归零，桌面映射消失且其他映射保持。重新占用并检查一键一次事件。预先由宿主添加同一映射后退出桌面 Pawn，应保留该映射。托管测试覆盖映射所有权和生命周期，完整 UE 编译、PIE、头显未验证。
+
+## PR #8 桌面 Pawn 自动生成测试手（2026-11-05）
+`Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs` 新增 `LeftHandClass`、`RightHandClass`。在桌面 Pawn 蓝图 Class Defaults 指派 VR Pawn 已使用的左右手蓝图类，配置 Camera 下的左右目标位置和旋转，然后按前节配置 DesktopMappingContext 与输入动作。关卡可不再放置手实例。有效的 `LeftHand`/`RightHand` 实例引用优先于类配置，允许一侧摆放、一侧自动生成。手类仍需具备原有物理体、Palm、GrabSphere、骨骼和 AnimBP 配置。
+BeginPlay 在目标世界变换处生成缺少的手，初始化物理与手别，不接入 XR 输入。Pawn EndPlay 会先释放其生成的手所抓的有效道具，再销毁这些手。已有实例不由 Pawn 销毁。缺类、缺目标或生成失败会保留空手引用，另一侧仍可使用。
+UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor 与 EndPlay 绑定。用无头显普通 PIE 启动桌面地图，确认两只手各生成一次、在对应目标附近、可用键鼠切手、抓取和扳机驱动专用姿势。保持锁存抓取后销毁桌面 Pawn，预期道具释放、生成手消失。再预放一侧手并填实例引用，预期该侧无重复生成且退出后保留。托管回归覆盖选择、生成失败和释放先于销毁，未验证 UE 编译、PIE、Chaos 或头显。

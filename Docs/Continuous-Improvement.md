@@ -111,3 +111,5 @@ Combined math, pose/trigger, desktop grip, event state and 192 admission policy 
 - 2026-11-05 PR #8 增加可重复的指定抓点入口，连接桌面 Pawn、局部接触筛选与既有特殊姿势生命周期。拒绝远处绑定组件、错误 Actor 或手别，失败不回退到其他姿势。联合 .NET9 检查覆盖托管逻辑。UE 编译、PIE 和头显待验，按钮接线见 LocalUEHandover。
 
 - 2026-11-05 PR #8 新增桌面 Pawn 自管 Enhanced Input 映射。配置映射资产和优先级后随本地占用加入，退出清理本 Pawn 添加的上下文，保留宿主已安装映射。生产方法托管回归覆盖占用、切出、重入和外部映射。Glue 与本地验收见 LocalUEHandover，UE 编译、PIE、头显待验。
+
+- 2026-11-05 PR #8 桌面 Pawn 支持从左右手蓝图类自动生成测试手，复用已有实例优先，生成手退出时放下并清理。减少桌面测试地图摆放与引用配置。托管回归覆盖手来源优先级、目标变换、生成失败与退出，UE 编译、PIE 和头显待验。

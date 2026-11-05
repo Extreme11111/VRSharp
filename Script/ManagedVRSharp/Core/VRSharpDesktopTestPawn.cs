@@ -23,6 +23,14 @@ public partial class AVRSharpDesktopTestPawn : APawn
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial AVRSharpHand? RightHand { get; set; }
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial TSubclassOf<AVRSharpHand> LeftHandClass { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial TSubclassOf<AVRSharpHand> RightHandClass { get; set; }
+
+    private AVRSharpHand? spawnedLeftHand;
+    private AVRSharpHand? spawnedRightHand;
+
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial bool ControlLeftHand { get; set; }
 
 
@@ -90,6 +98,9 @@ public partial class AVRSharpDesktopTestPawn : APawn
     public override void EndPlay(EEndPlayReason endPlayReason)
     {
         ClearDesktopMapping();
+        DestroySpawnedHand(spawnedLeftHand);
+        DestroySpawnedHand(spawnedRightHand);
+        spawnedLeftHand = spawnedRightHand = null;
         base.EndPlay(endPlayReason);
     }
 
@@ -322,10 +333,36 @@ public partial class AVRSharpDesktopTestPawn : APawn
             initialRightRotation = RightTarget.RelativeRotation;
             targetsCaptured = true;
         }
-        // Initialize physics only; never request XR tracking or bind VR input actions.
-        if (LeftHand is { } left && SystemLibrary.IsValid(left)) left.InitializeHand(true);
-        if (RightHand is { } right && SystemLibrary.IsValid(right)) right.InitializeHand(false);
+        LeftHand = PrepareDesktopHand(LeftHand, LeftHandClass, LeftTarget, true, out spawnedLeftHand);
+        RightHand = PrepareDesktopHand(RightHand, RightHandClass, RightTarget, false, out spawnedRightHand);
     }
+    private AVRSharpHand? PrepareDesktopHand(AVRSharpHand? assignedHand, TSubclassOf<AVRSharpHand> handClass,
+        USceneComponent? target, bool isLeft, out AVRSharpHand? spawnedHand)
+    {
+        spawnedHand = null;
+        if (assignedHand is not null && SystemLibrary.IsValid(assignedHand))
+        {
+            assignedHand.InitializeHand(isLeft);
+            return assignedHand;
+        }
+        if (target is null || !SystemLibrary.IsValid(target) || handClass.Equals(default(TSubclassOf<AVRSharpHand>)))
+            return null;
+
+        var transform = new FTransform(target.WorldRotation, target.WorldLocation, new FVector(1, 1, 1));
+        var hand = SpawnActor(handClass, transform, ESpawnActorCollisionHandlingMethod.AlwaysSpawn);
+        if (hand is null || !SystemLibrary.IsValid(hand)) return null;
+        hand.InitializeHand(isLeft);
+        spawnedHand = hand;
+        return hand;
+    }
+
+    private static void DestroySpawnedHand(AVRSharpHand? hand)
+    {
+        if (hand is null || !SystemLibrary.IsValid(hand)) return;
+        if (hand.GrabbedObject is { } item && SystemLibrary.IsValid(item)) hand.Release();
+        if (SystemLibrary.IsValid(hand)) hand.DestroyActor();
+    }
+
     public override void Tick(float deltaSeconds)
     {
         base.Tick(deltaSeconds);

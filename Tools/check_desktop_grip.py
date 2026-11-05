@@ -150,3 +150,50 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-mapping-") as d:
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project>')
  (p/"Program.cs").write_text(code)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
+
+# Hand creation and teardown with substitutes for the Unreal actor calls.
+code = '''using System;
+struct TSubclassOf<T> { public int ClassId; }
+struct FVector { public FVector(int x,int y,int z){} }
+record FTransform(int Rotation,int Location,FVector Scale);
+enum ESpawnActorCollisionHandlingMethod { AlwaysSpawn }
+class USceneComponent { public int WorldRotation=2,WorldLocation=3; }
+class AVRSharpHand {
+ public bool? Left; public object? GrabbedObject; public bool Destroyed;
+ public int Releases;
+ public void InitializeHand(bool left){Left=left;}
+ public void Release(){Releases++;GrabbedObject=null;}
+ public void DestroyActor(){if(GrabbedObject!=null)throw new Exception("still held");Destroyed=true;}
+}
+static class SystemLibrary {public static bool IsValid(object? x)=>x!=null;}
+class Rig {
+ public int Spawns;
+ public bool SpawnFails;
+ private AVRSharpHand? SpawnActor(TSubclassOf<AVRSharpHand> cls,FTransform transform,ESpawnActorCollisionHandlingMethod mode)
+ {if(transform.Location!=3||transform.Rotation!=2)throw new Exception("wrong target transform");Spawns++;return SpawnFails?null:new();}
+ public AVRSharpHand? PrepareDesktopHand(AVRSharpHand? assignedHand,TSubclassOf<AVRSharpHand> handClass,USceneComponent? target,bool isLeft,out AVRSharpHand? spawnedHand)
+'''
+code += body('private AVRSharpHand? PrepareDesktopHand(')
+code += ' public static void DestroySpawnedHand(AVRSharpHand? hand) ' + body('private static void DestroySpawnedHand(')
+code += '''}
+class Program {
+ static void Check(bool ok){if(!ok)throw new Exception("desktop hand setup regression");}
+ static void Main(){
+  var rig=new Rig();var target=new USceneComponent();var cls=new TSubclassOf<AVRSharpHand>{ClassId=1};
+  var assigned=new AVRSharpHand();
+  Check(rig.PrepareDesktopHand(assigned,cls,target,true,out var owned)==assigned&&owned==null&&assigned.Left==true&&rig.Spawns==0);
+  Check(rig.PrepareDesktopHand(null,default,target,false,out owned)==null&&owned==null&&rig.Spawns==0);
+  Check(rig.PrepareDesktopHand(null,cls,null,false,out owned)==null&&rig.Spawns==0);
+  var hand=rig.PrepareDesktopHand(null,cls,target,false,out owned);
+  Check(hand!=null&&hand==owned&&hand.Left==false&&rig.Spawns==1);
+  hand!.GrabbedObject=new();Rig.DestroySpawnedHand(owned);Check(hand.Releases==1&&hand.Destroyed&&!assigned.Destroyed);
+  rig.SpawnFails=true;Check(rig.PrepareDesktopHand(null,cls,target,true,out owned)==null&&owned==null);
+  Console.WriteLine("Desktop hand setup: preplaced hand, spawn transform, missing/failed class and owned cleanup passed.");
+ }
+}
+'''
+with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-hands-") as d:
+ p=Path(d)
+ (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project>')
+ (p/"Program.cs").write_text(code)
+ subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
