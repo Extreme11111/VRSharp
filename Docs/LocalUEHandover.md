@@ -127,3 +127,8 @@ UE5.7/UnrealSharp0.1宿主生成Glue并编译。在/VRSharp/Maps/VRSharpDemo测�
 合并manual-finger-input到desktop-test-pawn，保留事件、准入和动画淡出逻辑。Core/VRSharpDesktopTestPawn.cs新增可选DesktopFingers Axis3D，XYZ=thumb/index/grasp；SetEmptyHandInput可供UI直接调用。创建IA_DesktopFingers，Z/X/C分别映射X/Y/Z正轴，使用Swizzle将一维值移至相应轴；Triggered持续赋值，Completed/Canceled清零。首次BindDesktopInput成功前赋动作。原DesktopTrigger空手时同时控制食指，取两输入最大值；持物时沿用扳机业务/动画。无需XR。
 切手清除旧手外部输入并清零模拟轴；ResetDesktopInput清理两手；抓握期间SetFingerInput拒绝覆盖接触/专用姿势。松开后下一Tick恢复当前桌面空手输入。空手外部输入会阻止旧VR空手回调覆盖，ClearFingerInput交还旧输入。验收：三轴单独/组合闭合、松键张开、按住手指轴抓取专用工具→扳机→放下恢复当前输入、切手不残留、失焦调用Reset、两手持物不受空手轴影响。
 生产FingerInput/手方法隔离回归及数学检查用于验证托管逻辑；不覆盖完整Pawn、原生输入、骨骼动画和接触物理。UE编译、PIE、头显未验证。二进制资产未编辑。
+
+## PR #8 OpenXR 与桌面持物扳机共用（2026-11-05）
+`Script/ManagedVRSharp/Core/VRSharpHand.cs` 在现有 `InitializeInputEvents` 绑定手侧扳机。保留原 `TriggerAction` 的数字 Started→1。可在左右手蓝图分别配置 `AnalogTriggerAction`，替代数字输入。创建 Axis3D 的 `IA_TriggerAnalog_L` 和 `IA_TriggerAnalog_R`，在 VR Pawn 的 OpenXR Mapping Context 分别映射控制器左、右模拟 Trigger Axis 到 X，使用持续 Triggered 的轴配置。Completed 和 Canceled 清零。不要给两个手实例指派同一个 Action。桌面 Pawn 继续通过自己的输入绑定调用共用 `SetGrabTrigger`。若宿主此前按旧交接在蓝图手动转发同一个 XR 动作，应移除重复转发。
+空手时轴驱动食指，外部 `SetFingerInput` 占用时优先。抓取后每帧使用最新样本，先按扳机再抓也会驱动专用姿势和物体事件。放下时工具归零，空手下一个 Tick 仍反映实际按压。多个输入事件在一次手 Tick 内合为最后一个样本。
+本地先用 UE5.7/UnrealSharp0.1 生成 Glue 并编译，确认 `BindAction(..., out _)`、Axis3D Getter 和蓝图属性可用。桌面 PIE 回归扳机与抓放，然后在 VR Preview 测数字回退、左右手分别半按、先按再抓、按住释放、取消动作映射。预期相应手的 `GetGrabPoseTrigger`、专用动画和工具事件同步，另一手不受影响。托管测试覆盖路由、输入占用和取消归零，尚未验证 UE 编译、PIE 或头显。

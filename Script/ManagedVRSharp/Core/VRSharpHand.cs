@@ -41,6 +41,11 @@ public partial class AVRSharpHand : AActor
 
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere), Category("VRInputActions")]
     public partial UInputAction? TriggerAction { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? AnalogTriggerAction { get; set; }
+    private bool xrTriggerBound;
+    private float xrTrigger;
+
 
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere), Category("VRInputActions")]
     public partial UInputAction? AXAction { get; set; }
@@ -250,13 +255,22 @@ public partial class AVRSharpHand : AActor
         inputComponent.BindAction(TouchedAction!, ETriggerEvent.Started, ThumbTouchedAnim, out _);
         inputComponent.BindAction(AXAction!, ETriggerEvent.Started, ThumbClickedAnim, out _);
         inputComponent.BindAction(BYAction!, ETriggerEvent.Started, ThumbClickedAnim, out _);
-        inputComponent.BindAction(TriggerAction!, ETriggerEvent.Started, IndexClickedAnim, out _);
+        var triggerAction = AnalogTriggerAction ?? TriggerAction;
+        if (triggerAction is not null)
+        {
+            if (AnalogTriggerAction is not null)
+                inputComponent.BindAction(triggerAction, ETriggerEvent.Triggered, OnAnalogTrigger, out _);
+            else
+                inputComponent.BindAction(triggerAction, ETriggerEvent.Started, IndexClickedAnim, out _);
+            inputComponent.BindAction(triggerAction, ETriggerEvent.Completed, IndexReleasedAnim, out _);
+            inputComponent.BindAction(triggerAction, ETriggerEvent.Canceled, IndexReleasedAnim, out _);
+            xrTriggerBound = true;
+        }
         inputComponent.BindAction(GripAction!, ETriggerEvent.Started, GraspClickedAnim, out _);
 
         inputComponent.BindAction(TouchedAction!, ETriggerEvent.Completed, ThumbReleasedAnim, out _);
         inputComponent.BindAction(AXAction!, ETriggerEvent.Completed, ThumbReleasedAnim, out _);
         inputComponent.BindAction(BYAction!, ETriggerEvent.Completed, ThumbReleasedAnim, out _);
-        inputComponent.BindAction(TriggerAction!, ETriggerEvent.Completed, IndexReleasedAnim, out _);
         inputComponent.BindAction(GripAction!, ETriggerEvent.Completed, GraspReleasedAnim, out _);
     }
 
@@ -264,6 +278,7 @@ public partial class AVRSharpHand : AActor
     {
         base.Tick(deltaSeconds);
         AdvancePoseAnimation(deltaSeconds);
+        ApplyXrTrigger();
         if (!IsGrabbing)
             RefreshGrabTarget();
 
@@ -406,10 +421,28 @@ public partial class AVRSharpHand : AActor
     }
 
     [UFunction]
-    private void IndexClickedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
+    private void IndexClickedAnim(FInputActionValue value, float elapsed, float triggered, UInputAction action)
     {
-        if (IsGrabbing || externalFingerInput) return;
-        targetIndexWeight = 1f;
+        xrTrigger = 1;
+    }
+
+    [UFunction]
+    private void OnAnalogTrigger(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    {
+        xrTrigger = FingerInput.Normalize((float)value.GetAxis3D().X, xrTrigger);
+    }
+
+    private void ApplyXrTrigger()
+    {
+        if (!xrTriggerBound) return;
+        if (IsGrabbing)
+        {
+            if (xrTrigger != activePoseTrigger) SetGrabTrigger(xrTrigger);
+        }
+        else if (!externalFingerInput)
+        {
+            targetIndexWeight = xrTrigger;
+        }
     }
 
     [UFunction]
@@ -427,10 +460,9 @@ public partial class AVRSharpHand : AActor
     }
 
     [UFunction]
-    private void IndexReleasedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
+    private void IndexReleasedAnim(FInputActionValue value, float elapsed, float triggered, UInputAction action)
     {
-        if (IsGrabbing || externalFingerInput) return;
-        targetIndexWeight = 0f;
+        xrTrigger = 0;
     }
 
     [UFunction]

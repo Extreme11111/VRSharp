@@ -65,33 +65,33 @@ public partial class AVRSharpDesktopTestPawn : APawn
         if (boundDesktopInput is not null) return boundDesktopInput == input;
         if (DesktopMove is null || DesktopLook is null || DesktopHandMove is null ||
             DesktopGrip is null || DesktopSwitchHand is null || DesktopTrigger is null) return false;
-        input.BindAction(DesktopMove, ETriggerEvent.Triggered, OnDesktopMove);
-        input.BindAction(DesktopMove, ETriggerEvent.Completed, OnDesktopMoveStop);
-        input.BindAction(DesktopMove, ETriggerEvent.Canceled, OnDesktopMoveStop);
-        input.BindAction(DesktopLook, ETriggerEvent.Triggered, OnDesktopLook);
-        input.BindAction(DesktopHandMove, ETriggerEvent.Triggered, OnDesktopHandMove);
-        input.BindAction(DesktopHandMove, ETriggerEvent.Completed, OnDesktopHandMoveStop);
-        input.BindAction(DesktopHandMove, ETriggerEvent.Canceled, OnDesktopHandMoveStop);
-        input.BindAction(DesktopTrigger, ETriggerEvent.Triggered, OnDesktopTrigger);
-        input.BindAction(DesktopTrigger, ETriggerEvent.Completed, OnDesktopTriggerStop);
-        input.BindAction(DesktopTrigger, ETriggerEvent.Canceled, OnDesktopTriggerStop);
-        input.BindAction(DesktopGrip, ETriggerEvent.Started, OnDesktopGrab);
-        input.BindAction(DesktopGrip, ETriggerEvent.Completed, OnDesktopRelease);
-        input.BindAction(DesktopGrip, ETriggerEvent.Canceled, OnDesktopRelease);
-        input.BindAction(DesktopSwitchHand, ETriggerEvent.Started, OnDesktopSwitch);
+        input.BindAction(DesktopMove, ETriggerEvent.Triggered, OnDesktopMove, out _);
+        input.BindAction(DesktopMove, ETriggerEvent.Completed, OnDesktopMoveStop, out _);
+        input.BindAction(DesktopMove, ETriggerEvent.Canceled, OnDesktopMoveStop, out _);
+        input.BindAction(DesktopLook, ETriggerEvent.Triggered, OnDesktopLook, out _);
+        input.BindAction(DesktopHandMove, ETriggerEvent.Triggered, OnDesktopHandMove, out _);
+        input.BindAction(DesktopHandMove, ETriggerEvent.Completed, OnDesktopHandMoveStop, out _);
+        input.BindAction(DesktopHandMove, ETriggerEvent.Canceled, OnDesktopHandMoveStop, out _);
+        input.BindAction(DesktopTrigger, ETriggerEvent.Triggered, OnDesktopTrigger, out _);
+        input.BindAction(DesktopTrigger, ETriggerEvent.Completed, OnDesktopTriggerStop, out _);
+        input.BindAction(DesktopTrigger, ETriggerEvent.Canceled, OnDesktopTriggerStop, out _);
+        input.BindAction(DesktopGrip, ETriggerEvent.Started, OnDesktopGrab, out _);
+        input.BindAction(DesktopGrip, ETriggerEvent.Completed, OnDesktopRelease, out _);
+        input.BindAction(DesktopGrip, ETriggerEvent.Canceled, OnDesktopRelease, out _);
+        input.BindAction(DesktopSwitchHand, ETriggerEvent.Started, OnDesktopSwitch, out _);
         if (DesktopHandRotate is not null)
         {
-            input.BindAction(DesktopHandRotate, ETriggerEvent.Triggered, OnDesktopHandRotate);
-            input.BindAction(DesktopHandRotate, ETriggerEvent.Completed, OnDesktopHandRotateStop);
-            input.BindAction(DesktopHandRotate, ETriggerEvent.Canceled, OnDesktopHandRotateStop);
+            input.BindAction(DesktopHandRotate, ETriggerEvent.Triggered, OnDesktopHandRotate, out _);
+            input.BindAction(DesktopHandRotate, ETriggerEvent.Completed, OnDesktopHandRotateStop, out _);
+            input.BindAction(DesktopHandRotate, ETriggerEvent.Canceled, OnDesktopHandRotateStop, out _);
         }
         if (DesktopToggleGrip is not null)
-            input.BindAction(DesktopToggleGrip, ETriggerEvent.Started, OnDesktopToggleGrip);
+            input.BindAction(DesktopToggleGrip, ETriggerEvent.Started, OnDesktopToggleGrip, out _);
         if (DesktopFingers is not null)
         {
-            input.BindAction(DesktopFingers, ETriggerEvent.Triggered, OnDesktopFingers);
-            input.BindAction(DesktopFingers, ETriggerEvent.Completed, OnDesktopFingersStop);
-            input.BindAction(DesktopFingers, ETriggerEvent.Canceled, OnDesktopFingersStop);
+            input.BindAction(DesktopFingers, ETriggerEvent.Triggered, OnDesktopFingers, out _);
+            input.BindAction(DesktopFingers, ETriggerEvent.Completed, OnDesktopFingersStop, out _);
+            input.BindAction(DesktopFingers, ETriggerEvent.Canceled, OnDesktopFingersStop, out _);
         }
         boundDesktopInput = input;
         return true;

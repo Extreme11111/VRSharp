@@ -12,7 +12,7 @@ def extract(signature):
         depth += (source[end] == "{") - (source[end] == "}")
         end += 1
     return source[start:end]
-methods = [extract(s) for s in ["public bool SetFingerInput(", "public void ClearFingerInput(", "private void SetAllAnimationWeights("]]
+methods = [extract(s) for s in ["public bool SetFingerInput(", "public void ClearFingerInput(", "private void SetAllAnimationWeights(", "private void ApplyXrTrigger("]]
 handlers = ["ThumbTouchedAnim", "ThumbClickedAnim", "IndexClickedAnim", "GraspClickedAnim", "ThumbReleasedAnim", "IndexReleasedAnim", "GraspReleasedAnim"]
 for name in handlers:
     method = extract("private void " + name + "(")
@@ -23,6 +23,7 @@ public static void Main() {
  var h = new TestHand(); var other = new TestHand();
  Check(h.SetFingerInput(.2f,.4f,.6f));
  h.ThumbTouchedAnim(); h.ThumbClickedAnim(); h.IndexClickedAnim(); h.GraspClickedAnim();
+ h.ApplyXrTrigger();
  h.ThumbReleasedAnim(); h.IndexReleasedAnim(); h.GraspReleasedAnim();
  Check(h.targetThumbWeight==.2f && h.targetIndexWeight==.4f && h.targetGraspWeight==.6f);
  other.GraspClickedAnim(); Check(other.targetGraspWeight==1);
@@ -31,6 +32,11 @@ public static void Main() {
  h.IsGrabbing=false; h.ClearFingerInput(); h.ClearFingerInput();
  Check(h.targetThumbWeight==0 && h.targetIndexWeight==0 && h.targetGraspWeight==0);
  h.GraspClickedAnim(); Check(h.targetGraspWeight==1);
+ h.IndexClickedAnim(); h.ApplyXrTrigger(); Check(h.targetIndexWeight==1);
+ h.IsGrabbing=true; h.ApplyXrTrigger(); h.ApplyXrTrigger(); Check(h.activePoseTrigger==1 && h.triggerCalls==1);
+ h.IndexReleasedAnim(); h.ApplyXrTrigger(); Check(h.activePoseTrigger==0 && h.triggerCalls==2);
+ h.IndexClickedAnim(); h.IsGrabbing=false; h.ApplyXrTrigger(); Check(h.targetIndexWeight==1);
+ h.xrTriggerBound=false; h.IndexReleasedAnim(); h.ApplyXrTrigger(); Check(h.targetIndexWeight==1);
  Console.WriteLine("Production method subset: ownership, release, grab protection and hand isolation passed.");
 }
 """
@@ -38,5 +44,5 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-input-state-") as directory:
     path = Path(directory)
     (path/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings></PropertyGroup></Project>')
     (path/"FingerInput.cs").write_text((root/"Script/ManagedVRSharp/Core/FingerInput.cs").read_text())
-    (path/"Program.cs").write_text("using VRSharp.Core; class TestHand { public bool IsGrabbing; private bool externalFingerInput; public float targetThumbWeight,targetIndexWeight,targetGraspWeight;\n"+"\n".join(methods)+test+"}")
+    (path/"Program.cs").write_text("using VRSharp.Core; class TestHand { public bool IsGrabbing; private bool externalFingerInput; private bool xrTriggerBound=true; private float xrTrigger,activePoseTrigger; private int triggerCalls; private void SetGrabTrigger(float value){activePoseTrigger=value;triggerCalls++;} public float targetThumbWeight,targetIndexWeight,targetGraspWeight;\n"+"\n".join(methods)+test+"}")
     subprocess.run(["dotnet","run","--project",str(path/"Check.csproj"),"--configuration","Release"],check=True)
