@@ -11,7 +11,13 @@ def method(sig):
 members="\n".join(l for l in s.splitlines() if any(x in l for x in ["public UPrimitiveComponent? GrabbedComponent {","public int GrabCount =>","public bool IsGrabbed =>","public event Action<AVRSharpHand","public bool IsHeldBy(","public AVRSharpHand[] GetGrabbingHands()"]))
 code="""using System; using System.Linq; using System.Collections.Generic;
 enum EAttachmentRule {KeepWorld} enum EDetachmentRule {KeepWorld}
-class UPrimitiveComponent {public bool Valid=true;}
+class UPrimitiveComponent {
+ public bool Valid=true,Simulating=true;
+ public int LinearVelocity=10,AngularVelocity=20;
+ public bool IsSimulatingPhysics()=>Simulating;
+ public void SetPhysicsLinearVelocity(int velocity){LinearVelocity=velocity;}
+ public void SetPhysicsAngularVelocityInRadians(int velocity,bool add,string? bone){AngularVelocity=velocity;}
+}
 static class SystemLibrary {public static bool IsValid(object o)=>o is UPrimitiveComponent c?c.Valid:o!=null;}
 class AVRSharpHand {
  public int GrabNotices,ReleaseNotices;
@@ -23,6 +29,7 @@ class AVRSharpHand {
  public void DetachFromActor(EDetachmentRule a,EDetachmentRule b,EDetachmentRule c){Detaches++;}
 }
 class UVRSharpGrabbable {
+ public bool DropWithoutMomentum;
  public bool AdmissionAllowed=true; public bool CanGrab(AVRSharpHand hand)=>AdmissionAllowed;
  private readonly List<AVRSharpHand> hands=new();
  private readonly Dictionary<AVRSharpHand,UPrimitiveComponent> components=new();
@@ -40,10 +47,23 @@ class Program {
  g.Attach(b,c);var snapshot=g.GetGrabbingHands();g.Detach(a);g.Detach(a);
  Check(g.IsGrabbed&&g.GrabCount==1&&left==1&&snapshot.Length==2&&b.IsGrabbing);
  g.Detach(b);Check(!g.IsGrabbed&&g.GrabCount==0&&left==2&&entered==2);
- Check(b.Attaches>1&&b.Detaches>0);
+ Check(c.LinearVelocity==10&&c.AngularVelocity==20);
  Check(a.GrabNotices==1&&b.GrabNotices==1&&a.ReleaseNotices==1&&b.ReleaseNotices==1);
+ var drop=new UVRSharpGrabbable{DropWithoutMomentum=true};
+ var first=new UPrimitiveComponent();var last=new UPrimitiveComponent();
+ drop.Attach(a,first);drop.Attach(b,last);drop.Detach(a);
+ Check(first.LinearVelocity==10&&last.LinearVelocity==10&&last.AngularVelocity==20);
+ drop.Released+=(h,o,p)=>Check(!o.IsGrabbed&&p==last&&p.LinearVelocity==0&&p.AngularVelocity==0);
+ drop.Detach(b);Check(first.LinearVelocity==10&&first.AngularVelocity==20);
+ foreach(var skipped in new[]{new UPrimitiveComponent{Simulating=false},new UPrimitiveComponent()}){
+  var item=new UVRSharpGrabbable{DropWithoutMomentum=true};item.Attach(a,skipped);
+  if(skipped.Simulating)skipped.Valid=false;
+  item.Detach(a);Check(!item.IsGrabbed&&skipped.LinearVelocity==10&&skipped.AngularVelocity==20);
+ }
+ Check(b.Attaches>1&&b.Detaches>0);
+
  c.Valid=false;g.Attach(a,c);Check(entered==2);
- Console.WriteLine("Production grab subset: contextual events, state, failed/duplicate attachment and dual-hand release passed.");
+ Console.WriteLine("Production grab subset: contextual events, state, failed/duplicate attachment and dual-hand release, and opt-in momentum reset passed.");
  }
 }"""
 with tempfile.TemporaryDirectory(prefix="vrsharp-grab-check-") as d:

@@ -132,3 +132,7 @@ UE5.7/UnrealSharp0.1宿主生成Glue并编译。在/VRSharp/Maps/VRSharpDemo测�
 `Script/ManagedVRSharp/Core/VRSharpHand.cs` 在现有 `InitializeInputEvents` 绑定手侧扳机。保留原 `TriggerAction` 的数字 Started→1。可在左右手蓝图分别配置 `AnalogTriggerAction`，替代数字输入。创建 Axis3D 的 `IA_TriggerAnalog_L` 和 `IA_TriggerAnalog_R`，在 VR Pawn 的 OpenXR Mapping Context 分别映射控制器左、右模拟 Trigger Axis 到 X，使用持续 Triggered 的轴配置。Completed 和 Canceled 清零。不要给两个手实例指派同一个 Action。桌面 Pawn 继续通过自己的输入绑定调用共用 `SetGrabTrigger`。若宿主此前按旧交接在蓝图手动转发同一个 XR 动作，应移除重复转发。
 空手时轴驱动食指，外部 `SetFingerInput` 占用时优先。抓取后每帧使用最新样本，先按扳机再抓也会驱动专用姿势和物体事件。放下时工具归零，空手下一个 Tick 仍反映实际按压。多个输入事件在一次手 Tick 内合为最后一个样本。
 本地先用 UE5.7/UnrealSharp0.1 生成 Glue 并编译，确认 `BindAction(..., out _)`、Axis3D Getter 和蓝图属性可用。桌面 PIE 回归扳机与抓放，然后在 VR Preview 测数字回退、左右手分别半按、先按再抓、按住释放、取消动作映射。预期相应手的 `GetGrabPoseTrigger`、专用动画和工具事件同步，另一手不受影响。托管测试覆盖路由、输入占用和取消归零，尚未验证 UE 编译、PIE 或头显。
+
+## PR #8 道具原地松手配置（2026-11-05）
+`Script/ManagedVRSharp/Core/VRSharpGrabbable.cs` 新增 `DropWithoutMomentum`。在道具蓝图的 Grabbable 组件开启，配合启用了 Simulate Physics 的单刚体 Static Mesh 和原有可抓碰撞设置。最后一只手解除焊接后，在 Released 通知前清零该手对应组件根刚体的线速度和角速度。重力和碰撞仍参与后续物理步。多组件道具仅处理最后释放的那个 Primitive。默认关闭，沿用宿主物理速度。无效组件或未模拟物理时跳过。
+UE5.7/UnrealSharp0.1 先生成 Glue 并编译，确认 `SetPhysicsAngularVelocityInRadians` 绑定。复制两个相同道具到桌面测试地图，分别打开和关闭此选项。在移动和转动中松开，比较 Released 当帧速度，打开的应归零后自然下落。双手先放一只不清速，最终放开才清速。用桌面锁存抓握和 OpenXR 各走一遍。验证切换组件、无物理对象和对象销毁时的行为，检查托管测试使用的原生调用替身与 Chaos 实际脱焊结果。完整 UE 编译、PIE 和头显待验。

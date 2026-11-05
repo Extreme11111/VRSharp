@@ -24,6 +24,10 @@ public partial class UVRSharpGrabbable : UActorComponent
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial bool SingleHandOnly { get; set; }
 
+    // Applies to the last released primitive after unwelding the final hand.
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial bool DropWithoutMomentum { get; set; }
+
     public bool CanGrab(AVRSharpHand hand)
     {
         if (hand is null || !SystemLibrary.IsValid(hand)) return false;
@@ -237,7 +241,14 @@ public partial class UVRSharpGrabbable : UActorComponent
                 h.AttachToComponent(c, "", EAttachmentRule.KeepWorld, EAttachmentRule.KeepWorld, EAttachmentRule.KeepWorld, true);
 
         if (hands.Count == 0)
+        {
             GrabbedComponent = null;
+            if (DropWithoutMomentum && SystemLibrary.IsValid(releasedComponent) && releasedComponent.IsSimulatingPhysics())
+            {
+                releasedComponent.SetPhysicsLinearVelocity(default);
+                releasedComponent.SetPhysicsAngularVelocityInRadians(default, false, default);
+            }
+        }
         hand.NotifyReleased(this, releasedComponent);
         Released?.Invoke(hand, this, releasedComponent);
     }
