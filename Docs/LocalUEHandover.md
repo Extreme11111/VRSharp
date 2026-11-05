@@ -164,3 +164,7 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 ## PR #8 整合 PR #2 的失效道具释放恢复（2026-11-06）
 `Script/ManagedVRSharp/Core/VRSharpHand.cs` 的 `Release()` 在释放回调后重新校验 Grabbable。若已销毁或缺失，手以 KeepWorld 解除附着并清空持有状态，归零扳机和手指目标。失效的姿势跳过退出通知及淡出，仍有效的姿势走原淡出。旧的手侧 OnAfterRelease 继续触发，监听者访问旧对象前应检查有效性。无法通知已销毁对象的 Released。`VRSharpDesktopTestPawn.cs` 退出时调用相同恢复流程再销毁自建手。
 无需新增资产配置。用已有桌面测试地图和一件特殊姿势道具，分别在手和 Grabbable 的 C# BeforeRelease 回调销毁该道具 Actor。放下后应无原生无效引用异常，IsGrabbing 为 false，姿势和扳机清空，手能接着抓另一件物体。再以普通释放确认事件、工具开关与淡出保持。持物时销毁桌面 Pawn，验证自建手退出清理。回归使用原生替身测试真实 Release 方法，UE 编译、PIE、Chaos 脱焊和头显仍待验。
+
+## PR #8 道具仅允许专用抓点（2026-11-06）
+在道具蓝图的 `VRSharpGrabbable` 开启 `RequireExplicitGrabPose`。同 Actor 添加 `VRSharpHandPose` 场景组件，将 `TargetComponent` 指向可抓取的碰撞 Primitive，并配置手别、优先级、对齐变换和 AnimationKey。接触候选只保留有匹配抓点的组件，抓取回调后再检查配置。此模式需要显式组件引用，旧 `GrabPoses` 名称表仅在此选项关闭时可回退。旧资产默认关闭。底层 `Attach` 仍是原来的焊接入口，游戏逻辑应调用 `TryGrab`、`TryGrabAtPose` 或 `TryGrabWith` 走完整验证。
+本地用 UE5.7/UnrealSharp0.1 生成 Glue 并编译。在桌面和 VR 测试地图放置一件带两块可抓碰撞的工具，只给把手配置抓点，并禁用左手。右手靠近机身时预期无该工具高亮且抓取失败，靠近把手可抓取、播放专用动画并使用扳机。左手应失败。在同一抓球中放置另一个正常可抓物体，机身不应阻挡正常候选。取消限制后验证原抓法与名称映射可用。托管测试覆盖接触候选过滤和显式抓点选择。UE 编译、PIE、高亮、碰撞和头显待验。

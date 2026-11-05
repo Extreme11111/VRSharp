@@ -120,3 +120,5 @@ Combined math, pose/trigger, desktop grip, event state and 192 admission policy 
 - 2026-11-01: Draft release-lifecycle fix on cloud/release-invalid-grabbable. Recheck native validity after release callbacks; when grabbable is null/destroyed, detach the surviving hand and clear its grab state. Valid objects retain the existing LIFO detach path. Scope excludes callback reentrancy, callback exceptions and multi-component ownership. UE build/PIE/headset NOT RUN; accept only after testing normal release, destroy-on-before-release, missing cached object, repeated release and subsequent re-grab on both hands. Standalone math does not exercise this engine path; CI results must not be treated as runtime proof. LFS upload credentials remain unavailable, no assets modified.
 
 - 2026-11-06 PR #8 整合 PR #2。持物释放回调中销毁道具时恢复手的抓放和动画状态，桌面自建手退出复用该路径。托管回归覆盖已销毁、两类回调中销毁及正常淡出。测试场景和 UE 待验项见 LocalUEHandover。
+
+- 2026-11-06 PR #8 增加 Grabbable 的 RequireExplicitGrabPose。专用抓法可在接触选择阶段排除机身或错误手别，并在实际抓取前复核。旧资产默认保持普通抓法。两个数学检查和托管候选回归通过，UE、PIE 和头显仍待验，配置见 LocalUEHandover。

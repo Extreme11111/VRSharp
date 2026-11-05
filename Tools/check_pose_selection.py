@@ -50,7 +50,7 @@ code = '''using System;
 using System.Collections.Generic;
 class Owner {}
 class UPrimitiveComponent { public Owner? Owner; }
-class UVRSharpGrabbable { public Owner? Owner; }
+class UVRSharpGrabbable { public Owner? Owner; public bool RequireExplicitGrabPose; }
 class UVRSharpHandPose { public Owner? Owner; public UPrimitiveComponent? TargetComponent;
  public FVector WorldLocation; public bool DisableLeftHand, DisableRightHand; }
 struct FVector { public double X; public double LengthSquared()=>X*X;
@@ -63,12 +63,15 @@ class Rig {
  public bool IsGrabbing,IsLeft;
  public Sphere? Palm=new(),GrabSphere=new();
  public UVRSharpGrabbable? Item;
- public UVRSharpHandPose? Attached;
+ public UVRSharpHandPose? Attached, Authored;
+ private UVRSharpHandPose? FindExplicitGrabPose(UVRSharpGrabbable g,UPrimitiveComponent c)
+     => Authored?.TargetComponent==c?Authored:null;
  public List<FHitResult> targetHitResults=new();
  private void EnvironmentCheck(UVRSharpGrabbable g,UPrimitiveComponent c) {}
  private UVRSharpGrabbable? FindGrabbable(UPrimitiveComponent? c)=>c?.Owner==Item?.Owner?Item:null;
  private bool TryGetGrabPoint(UPrimitiveComponent c,FVector origin,out FVector point){point=origin;return true;}
  private bool Grab(UVRSharpGrabbable g,FVector p,FVector n,UPrimitiveComponent c,UVRSharpHandPose pose){Attached=pose;return true;}
+ public UPrimitiveComponent? SelectContact() => TrySelectGrabHit(targetHitResults,null,out var hit,out _) ? hit.Component.Object : null;
  public bool TryGrabAtPose(UVRSharpGrabbable grabbable,UVRSharpHandPose pose)
 '''
 code += body('public bool TryGrabAtPose(')
@@ -84,6 +87,9 @@ class Program {
   FHitResult Hit(UPrimitiveComponent c,double x)=>new(){Component=new(){Object=c},ImpactPoint=new(){X=x}};
   hand.targetHitResults=[Hit(sibling,1),Hit(requested,11)];Check(!hand.TryGrabAtPose(item,pose));
   hand.targetHitResults.Add(Hit(requested,7));Check(hand.TryGrabAtPose(item,pose)&&hand.Attached==pose);
+  Check(hand.SelectContact()==sibling);
+  item.RequireExplicitGrabPose=true;Check(hand.SelectContact()==null);
+  hand.Authored=pose;Check(hand.SelectContact()==requested&&hand.TryGrabAtPose(item,pose));
   pose.DisableLeftHand=true;Check(!hand.TryGrabAtPose(item,pose));pose.DisableLeftHand=false;
   pose.Owner=new Owner();Check(!hand.TryGrabAtPose(item,pose));pose.Owner=owner;
   pose.WorldLocation=new(){X=double.NaN};Check(!hand.TryGrabAtPose(item,pose));pose.WorldLocation=default;

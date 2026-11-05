@@ -615,6 +615,7 @@ public partial class AVRSharpHand : AActor
             if (hit.StartPenetrating && !TryGetGrabPoint(component!, origin, out point)) continue;
             double distance = FVector.DistanceSquared(origin, point);
             if (!double.IsFinite(distance) || distance > radius * radius || distance >= best) continue;
+            if (candidate.RequireExplicitGrabPose && FindExplicitGrabPose(candidate, component!) is null) continue;
             best = distance;
             selected = hit;
             selected.ImpactPoint = point;
@@ -676,13 +677,15 @@ public partial class AVRSharpHand : AActor
     {
         UVRSharpHandPose? best = null;
         double bestDistance = double.PositiveInfinity;
+        if (Palm is null || !SystemLibrary.IsValid(Palm)) return null;
+        var palmLocation = Palm.WorldLocation;
         var candidates = grabbable.Owner?.GetComponentsByClass<USceneComponent>();
         if (candidates is null) return null;
         foreach (var candidate in candidates.OfType<UVRSharpHandPose>())
         {
             if (!SystemLibrary.IsValid(candidate) || candidate.TargetComponent != component ||
                 (IsLeft ? candidate.DisableLeftHand : candidate.DisableRightHand)) continue;
-            var distance = FVector.DistanceSquared(Palm!.WorldLocation, candidate.WorldLocation);
+            var distance = FVector.DistanceSquared(palmLocation, candidate.WorldLocation);
             if (!double.IsFinite(distance)) continue;
             if (best is null || candidate.Priority > best.Priority ||
                 (candidate.Priority == best.Priority && (distance < bestDistance ||
@@ -732,6 +735,7 @@ public partial class AVRSharpHand : AActor
         if (requestedPose is not null && (IsGrabbing || !IsRequestedPoseValid(grabbable, component, requestedPose)))
             return false;
         UVRSharpHandPose? handPose = requestedPose ?? FindExplicitGrabPose(grabbable, component);
+        if (handPose is null && grabbable.RequireExplicitGrabPose) return false;
 
         if (handPose is null && grabbable.GrabPoses is not null)
         {

@@ -24,6 +24,10 @@ public partial class UVRSharpGrabbable : UActorComponent
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial bool SingleHandOnly { get; set; }
 
+    // Require a hand-compatible HandPose explicitly bound to the contacted primitive.
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial bool RequireExplicitGrabPose { get; set; }
+
     // Applies to the last released primitive after unwelding the final hand.
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial bool DropWithoutMomentum { get; set; }
