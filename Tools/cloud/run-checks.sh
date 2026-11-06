@@ -14,3 +14,5 @@ python3 Tools/check_pose_selection.py
 dotnet run --project Tools/FingerInputChecks/FingerInputChecks.csproj --configuration Release
 
 python3 Tools/check_finger_input_state.py
+
+python3 Tools/check_flashlight_demo.py

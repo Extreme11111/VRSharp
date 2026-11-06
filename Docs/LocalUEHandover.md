@@ -172,3 +172,12 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 ## PR #8 桌面双手独立扳机（2026-11-06）
 `Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs` 新增 `DesktopLeftTrigger`、`DesktopRightTrigger` 和 `SetHandTrigger(left,value)`。在 `IMC_VRSharpDesktop` 中分别创建两个不同的 Axis3D Action，键值进入 X 轴，例如 V/B 分别按压左右手，指派给 Pawn 对应属性。也可用测试 Widget 的两个滑条调用 SetHandTrigger。现有 DesktopTrigger 仍跟随当前手，与该手专用值取最大值。切手只清共享扳机，专用值保留。Completed/Canceled 清对应手，ResetDesktopInput 清两手，空手可观察各自食指。
 先用 UE5.7/UnrealSharp0.1 编译 Glue。在无头显桌面地图用锁存抓握让两手各抓一件测试物，或共同抓允许双手的同一工具。给工具设置扳机开关和专用姿势，按住 V 和 B 后切手并松 V，预期左手扳机归零、右手值不变，双手工具保持开启。再松 B，预期关闭。测试失焦时调用 ResetDesktopInput 并验证两手都归零。托管测试运行生产路由方法，原生按键映射、完整 UE 编译、PIE、动画显示和头显仍待验证。
+
+## PR #8 可抓手电筒验收道具（2026-11-06）
+`Script/ManagedVRSharp/Demo/VRSharpFlashlight.cs` 提供 `AVRSharpFlashlight`，内置 Body、Lamp、Grab 和左右手抓点。C# 在 BeginPlay 将抓点绑定到 Body 并限制各自手别，订阅 `Grab.TriggerActivationChanged`，用聚光灯可见性显示实际激活状态。Grab 的两个阈值均为零时，此示例使用 0.75/0.55。已配置的阈值保留。EndPlay 退订并关闭灯。
+
+1. 用 UE5.7 和 UnrealSharp0.1 生成 Glue 并编译。以该类为父类创建 `/VRSharp/Tests/BP_VRSharpFlashlight`，为 Body 设置简单圆柱或手电筒 Mesh、简单碰撞、Simulate Physics，以及当前手 GrabObjectTypes 可检测的物体类型。将 Lamp 设为 Movable，在 Body 前端朝向墙面。
+2. 调整 LeftGrip 和 RightGrip 的局部位置与旋转，让两侧手掌各自贴住把手。在 Grab 上开启 RequireExplicitGrabPose。可选配置左右手各自的 AnimationKey 和淡入淡出时间，按前述 AnimBP 接线使用已有手骨架对应的姿势动画。没有专用动画资源时仍可测试抓点对齐和灯光开关。
+3. 将道具放在桌面测试地图及 VR 测试地图的可达位置。普通 PIE 启动后灯应关闭。抓取、按下扳机后应点亮，松扳机或放下后应关闭。允许两手持物时用桌面独立扳机同时按压，两手依次松开，灯应只在最后一只激活手松开时关闭。用 OpenXR 重跑。验证左右手对齐、姿势切换及退出恢复。销毁道具时不应残留亮灯或事件订阅。
+
+本轮只交付 C# 示例类，蓝图、网格配置、动作映射、AnimBP 和关卡放置按上述步骤本地完成。托管测试用原生替身编译示例类，完整 UE 编译、PIE、渲染和头显待验。

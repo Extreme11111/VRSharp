@@ -124,3 +124,5 @@ Combined math, pose/trigger, desktop grip, event state and 192 admission policy 
 - 2026-11-06 PR #8 增加 Grabbable 的 RequireExplicitGrabPose。专用抓法可在接触选择阶段排除机身或错误手别，并在实际抓取前复核。旧资产默认保持普通抓法。两个数学检查和托管候选回归通过，UE、PIE 和头显仍待验，配置见 LocalUEHandover。
 
 - 2026-11-06 PR #8 桌面测试新增独立左右扳机键与脚本入口，无需 XR 即可复现双手工具和特殊姿势的同时按压、切手和单侧松开。托管路由回归与两项独立数学检查通过，UE 实际输入和动画待验，接线见 LocalUEHandover。
+
+- 2026-11-06 PR #8 增加可抓手电筒 C# 示例，将左右手抓点、双手扳机开关和聚光灯输出串联，适用于桌面和 OpenXR 验收。蓝图与场景接线见 LocalUEHandover。缓存 LFS 校验通过，从空缓存下载探针缺少 GitHub Git 凭据，上传权限仍未验证。源码可经 GitHub API 提交。完整 UE 编译、PIE 和头显待验。
