@@ -735,6 +735,7 @@ public partial class AVRSharpHand : AActor
         if (requestedPose is not null && (IsGrabbing || !IsRequestedPoseValid(grabbable, component, requestedPose)))
             return false;
         UVRSharpHandPose? handPose = requestedPose ?? FindExplicitGrabPose(grabbable, component);
+        bool alignPalmFrame = handPose is not null;
         if (handPose is null && grabbable.RequireExplicitGrabPose) return false;
 
         if (handPose is null && grabbable.GrabPoses is not null)
@@ -753,9 +754,19 @@ public partial class AVRSharpHand : AActor
             }
         }
 
-        if (handPose is not null)
+        if (handPose is not null && alignPalmFrame)
         {
-            // 使用预定义姿态：让 Palm 对齐到 HandPose 的位置和旋转
+            if (Palm is not { } palm || !SystemLibrary.IsValid(palm) ||
+                HandRigidbody is not { } root || !SystemLibrary.IsValid(root)) return false;
+
+            var alignment = VRSharpMathHelper.SolvePalmAlignment(
+                ActorLocation, root.WorldRotation, palm.WorldLocation, palm.WorldRotation,
+                handPose.WorldLocation, handPose.WorldRotation);
+            SetActorTransform(new FTransform(alignment.Rotation, alignment.Location, ActorScale3D), false, out _, true);
+        }
+        else if (handPose is not null)
+        {
+            // 旧名称表抓点按手 Actor 旋转制作，保持原有对齐方式。
             SetActorRotation(handPose.WorldRotation);
             SetActorLocation(handPose.WorldLocation - (Palm!.WorldLocation - ActorLocation));
         }

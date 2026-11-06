@@ -128,3 +128,5 @@ Combined math, pose/trigger, desktop grip, event state and 192 admission policy 
 - 2026-11-06 PR #8 增加可抓手电筒 C# 示例，将左右手抓点、双手扳机开关和聚光灯输出串联，适用于桌面和 OpenXR 验收。蓝图与场景接线见 LocalUEHandover。缓存 LFS 校验通过，从空缓存下载探针缺少 GitHub Git 凭据，上传权限仍未验证。源码可经 GitHub API 提交。完整 UE 编译、PIE 和头显待验。
 
 - 2026-11-06 PR #8 新增独占 HandPose 和占用查询，双手可在同一 Primitive 上选择不同的抓点。实际焊接成功才登记，释放后可重用。托管回归覆盖失败焊接、指定与自动选点、双手占用及兼容共享。UE 编译、PIE 和头显待验，配置见 LocalUEHandover。
+
+- 2026-11-06 PR #8 显式专用抓点改为对齐 Palm 的位置和旋转，处理 Palm 不在手 Actor 原点或有局部旋转的资产。名称表抓点保留原解释。两个独立数学检查包含 Palm 对齐回归，UE 编译、PIE 和头显待验。配置与既有显式抓点迁移见 LocalUEHandover。

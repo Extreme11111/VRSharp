@@ -1,3 +1,4 @@
+using UnrealSharp.CoreUObject;
 using VRSharp.Core;
 static void Check(bool ok,string name) { if(!ok) throw new Exception(name); }
 float r=2;
@@ -37,3 +38,22 @@ Check(VRSharpMathHelper.BlendPoseWeight(0,1,-1)==0,"negative trigger clamps");
 Check(VRSharpMathHelper.BlendPoseWeight(0,1,2)==1,"high trigger clamps");
 Check(VRSharpMathHelper.BlendPoseWeight(float.NaN,1,float.NaN)==0,"invalid blend remains finite");
 Console.WriteLine("Authored trigger blend boundaries passed.");
+
+// Reconstruct the palm from a hand-local offset and noncommuting rotations.
+var handLocation = new FVector(10, -2, 5);
+var targetLocation = new FVector(-8, 4, 17);
+var localPalm = new FVector(2, -3, 1);
+double halfRoot = Math.Sqrt(0.5);
+var handRotation = new FQuat(0, 0, halfRoot, halfRoot);
+var localPalmRotation = new FQuat(halfRoot, 0, 0, halfRoot);
+var targetRotation = new FQuat(0, halfRoot, 0, halfRoot);
+var palmLocation = handLocation + handRotation.RotateVector(localPalm);
+var palmRotation = handRotation * localPalmRotation;
+var aligned = VRSharpMathHelper.SolvePalmAlignment(handLocation, handRotation, palmLocation, palmRotation,
+    targetLocation, targetRotation);
+Check((aligned.Location + aligned.Rotation.RotateVector(localPalm) - targetLocation).LengthSquared() < 1e-20,
+    "authored grip aligns translated palm");
+var direction = new FVector(1, 2, 3);
+Check(((aligned.Rotation * localPalmRotation).RotateVector(direction) - targetRotation.RotateVector(direction)).LengthSquared() < 1e-20,
+    "authored grip compensates nonidentity palm rotation");
+Console.WriteLine("Authored grab alignment: palm position and rotation match the target frame.");

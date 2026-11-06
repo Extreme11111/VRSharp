@@ -4,6 +4,17 @@ namespace VRSharp.Core;
 
 public static class VRSharpMathHelper
 {
+    public static (FVector Location, FQuat Rotation) SolvePalmAlignment(
+        FVector handLocation, FQuat handRotation, FVector palmLocation, FQuat palmRotation,
+        FVector targetLocation, FQuat targetRotation)
+    {
+        // Rotate the whole hand about its current palm, then translate that palm onto the grab point.
+        var delta = FQuat.Normalize(targetRotation * FQuat.Inverse(palmRotation));
+        var rotation = FQuat.Normalize(delta * handRotation);
+        var location = targetLocation - delta.RotateVector(palmLocation - handLocation);
+        return (location, rotation);
+    }
+
     public static float BlendPoseWeight(float start, float end, float alpha)
         => float.Lerp(NormalizePoseWeight(start), NormalizePoseWeight(end), NormalizePoseWeight(alpha));
 

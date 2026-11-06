@@ -18,6 +18,11 @@ public readonly record struct FQuat(double X, double Y, double Z, double W)
         return new(q.X / length, q.Y / length, q.Z / length, q.W / length);
     }
     public static FQuat Inverse(FQuat q) => new(-q.X, -q.Y, -q.Z, q.W);
+    public FVector RotateVector(FVector vector)
+    {
+        var rotated = this * new FQuat(vector.X, vector.Y, vector.Z, 0) * Inverse(this);
+        return new FVector(rotated.X, rotated.Y, rotated.Z);
+    }
     public static FQuat operator *(FQuat a, FQuat b) => new(
         a.W * b.X + a.X * b.W + a.Y * b.Z - a.Z * b.Y,
         a.W * b.Y - a.X * b.Z + a.Y * b.W + a.Z * b.X,
