@@ -368,21 +368,26 @@ public partial class AVRSharpDesktopTestPawn : APawn
     private FVector initialLeftLocation, initialRightLocation;
     private FRotator initialLeftRotation, initialRightRotation;
     private bool targetsCaptured;
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial TArray<AActor>? DesktopCheckpointProps { get; set; }
+
     private DesktopCheckpoint? checkpoint;
     private bool restoringCheckpoint;
 
     private readonly record struct DesktopCheckpoint(
         FVector Location, FRotator Rotation, FVector CameraLocation, FRotator CameraRotation,
         FVector LeftLocation, FRotator LeftRotation, FVector RightLocation, FRotator RightRotation,
-        bool ControlLeft);
+        bool ControlLeft, DesktopPropCheckpoint[] Props);
+
+    private readonly record struct DesktopPropCheckpoint(AActor Actor, UPrimitiveComponent Body, FTransform Transform);
 
     [UFunction(FunctionFlags.BlueprintCallable)]
     public bool CaptureDesktopCheckpoint()
     {
-        if (!HasCheckpointComponents()) return false;
+        if (!HasCheckpointComponents() || restoringCheckpoint || !TryCaptureDesktopProps(out var props)) return false;
         checkpoint = new DesktopCheckpoint(ActorLocation, Origin!.WorldRotation, Camera!.RelativeLocation, Camera.RelativeRotation,
             LeftTarget!.RelativeLocation, LeftTarget.RelativeRotation,
-            RightTarget!.RelativeLocation, RightTarget.RelativeRotation, ControlLeftHand);
+            RightTarget!.RelativeLocation, RightTarget.RelativeRotation, ControlLeftHand, props);
         return true;
     }
 
@@ -398,6 +403,8 @@ public partial class AVRSharpDesktopTestPawn : APawn
             ResetDesktopInput();
             // Release callbacks may change the setup or take another grip.
             if (!HasCheckpointComponents() || IsHolding(LeftHand) || IsHolding(RightHand)) return false;
+            foreach (var prop in saved.Props)
+                if (!CanRestoreDesktopProp(prop)) return false;
 
             SetActorLocation(saved.Location);
             SetActorRotation(saved.Rotation);
@@ -410,12 +417,57 @@ public partial class AVRSharpDesktopTestPawn : APawn
             ControlLeftHand = saved.ControlLeft;
             if (LeftHand is { } left && SystemLibrary.IsValid(left)) left.ResetTrackingHistory();
             if (RightHand is { } right && SystemLibrary.IsValid(right)) right.ResetTrackingHistory();
-            return true;
+            bool restoredAllProps = true;
+            foreach (var prop in saved.Props)
+            {
+                if (!CanRestoreDesktopProp(prop) || !prop.Actor.SetActorTransform(prop.Transform, false, out _, true) ||
+                    !CanRestoreDesktopProp(prop))
+                {
+                    restoredAllProps = false;
+                    continue;
+                }
+                prop.Body.SetPhysicsLinearVelocity(default);
+                prop.Body.SetPhysicsAngularVelocityInRadians(default, false, default);
+            }
+            return restoredAllProps;
         }
         finally
         {
             restoringCheckpoint = false;
         }
+    }
+
+    private bool TryCaptureDesktopProps(out DesktopPropCheckpoint[] props)
+    {
+        props = [];
+        if (DesktopCheckpointProps is not { } configured || configured.Count == 0) return true;
+        var saved = new List<DesktopPropCheckpoint>();
+        var seen = new HashSet<AActor>();
+        foreach (var actor in configured)
+        {
+            if (actor is null || !SystemLibrary.IsValid(actor) ||
+                actor.RootComponent is not UPrimitiveComponent body || !SystemLibrary.IsValid(body)) return false;
+            if (!seen.Add(actor)) continue;
+            var prop = new DesktopPropCheckpoint(actor, body, actor.ActorTransform);
+            if (!CanRestoreDesktopProp(prop)) return false;
+            saved.Add(prop);
+        }
+        props = saved.ToArray();
+        return true;
+    }
+
+    private static bool CanRestoreDesktopProp(DesktopPropCheckpoint prop)
+    {
+        if (!SystemLibrary.IsValid(prop.Actor) || !SystemLibrary.IsValid(prop.Body) ||
+            prop.Actor.RootComponent != prop.Body || !prop.Body.IsSimulatingPhysics()) return false;
+        bool hasGrabbable = false;
+        foreach (var component in prop.Actor.GetComponentsByClass<UActorComponent>())
+        {
+            if (component is not UVRSharpGrabbable grab || !SystemLibrary.IsValid(grab)) continue;
+            if (grab.IsGrabbed) return false;
+            hasGrabbable = true;
+        }
+        return hasGrabbable;
     }
 
     private bool HasCheckpointComponents()

@@ -318,10 +318,35 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-triggers-") as d:
 
 # Repeatable desktop checkpoint using production Pawn methods and native doubles.
 checkpoint_start = src.index("private readonly record struct DesktopCheckpoint(")
-checkpoint_end = src.index(");", checkpoint_start) + 2
+checkpoint_end = src.index(");", src.index("private readonly record struct DesktopPropCheckpoint(", checkpoint_start)) + 2
 code = '''using System;
+using System.Collections.Generic;
 record struct FVector(double X,double Y,double Z);
 record struct FRotator(double Pitch,double Yaw,double Roll);
+record struct FTransform(int Value);
+class UActorComponent {}
+class UVRSharpGrabbable : UActorComponent { public bool IsGrabbed; }
+class UPrimitiveComponent {
+ public bool Simulates=true;
+ public int LinearVelocity=3, AngularVelocity=5;
+ public bool IsSimulatingPhysics()=>Simulates;
+ public void SetPhysicsLinearVelocity(int value)=>LinearVelocity=value;
+ public void SetPhysicsAngularVelocityInRadians(int value,bool add,string? bone)=>AngularVelocity=value;
+}
+class AActor {
+ public UPrimitiveComponent? RootComponent=new();
+ public FTransform ActorTransform;
+ public bool CanTeleport=true;
+ public int Teleports;
+ public UVRSharpGrabbable Grab=new();
+ public UActorComponent[] GetComponentsByClass<T>()=>new UActorComponent[]{Grab};
+ public bool SetActorTransform(FTransform value,bool sweep,out int hit,bool teleport){
+  if(sweep||!teleport)throw new Exception("expected teleport without sweep");
+  hit=0;
+  if(!CanTeleport)return false;
+  ActorTransform=value;Teleports++;return true;
+ }
+}
 class USceneComponent {
  public bool Valid=true;
  public FVector RelativeLocation;
@@ -340,6 +365,7 @@ static class SystemLibrary {
 class Rig {
  public USceneComponent? Origin=new(),Camera=new(),LeftTarget=new(),RightTarget=new();
  public AVRSharpHand? LeftHand=new(),RightHand=new();
+ public List<AActor>? DesktopCheckpointProps;
  public FVector ActorLocation;
  public bool ControlLeftHand;
  public int InputResets;
@@ -351,6 +377,8 @@ class Rig {
 '''
 code += src[checkpoint_start:checkpoint_end]
 for signature in ["public bool CaptureDesktopCheckpoint()", "public bool RestoreDesktopCheckpoint()",
+                  "private bool TryCaptureDesktopProps(out DesktopPropCheckpoint[] props)",
+                  "private static bool CanRestoreDesktopProp(DesktopPropCheckpoint prop)",
                   "private static void ReleaseCheckpointHand(AVRSharpHand? hand)", "public void Look(float yawDelta, float pitchDelta)"]:
  code += signature + body(signature)
 for signature in ["private bool HasCheckpointComponents()", "private static bool IsHolding("]:
@@ -381,6 +409,27 @@ class Program {
   rig.Camera.Valid=true;rig.LeftHand.OnRelease=()=>rig.LeftHand.IsGrabbing=true;
   Check(!rig.RestoreDesktopCheckpoint()&&rig.Origin.WorldRotation.Yaw==93&&rig.InputResets==2);
   Console.WriteLine("Desktop checkpoint: saved pose, both releases, mouse continuity, invalid setup and re-grab guard passed.");
+
+  var props=new Rig();
+  var tracked=new AActor{ActorTransform=new(10)};
+  var untracked=new AActor{ActorTransform=new(20)};
+  props.DesktopCheckpointProps=new(){tracked,tracked};
+  Check(props.CaptureDesktopCheckpoint());
+  tracked.ActorTransform=new(30);
+  props.LeftHand!.IsGrabbing=true;tracked.Grab.IsGrabbed=true;
+  props.LeftHand.OnRelease=()=>tracked.Grab.IsGrabbed=false;
+  Check(props.RestoreDesktopCheckpoint()&&tracked.ActorTransform.Value==10&&tracked.Teleports==1);
+  Check(tracked.RootComponent!.LinearVelocity==0&&tracked.RootComponent.AngularVelocity==0);
+  Check(untracked.ActorTransform.Value==20&&untracked.Teleports==0);
+  tracked.ActorTransform=new(40);tracked.Grab.IsGrabbed=true;
+  Check(!props.CaptureDesktopCheckpoint()&&!props.RestoreDesktopCheckpoint()&&tracked.ActorTransform.Value==40);
+  tracked.Grab.IsGrabbed=false;
+  tracked.CanTeleport=false;tracked.RootComponent.LinearVelocity=7;
+  Check(!props.RestoreDesktopCheckpoint()&&tracked.RootComponent.LinearVelocity==7);
+  tracked.CanTeleport=true;Check(props.RestoreDesktopCheckpoint()&&tracked.ActorTransform.Value==10);
+  tracked.RootComponent=new();
+  Check(!props.RestoreDesktopCheckpoint()&&tracked.Teleports==2);
+  Console.WriteLine("Desktop props: deduplication, release-before-teleport, zero momentum, external grip and failed restore passed.");
  }
 }
 '''

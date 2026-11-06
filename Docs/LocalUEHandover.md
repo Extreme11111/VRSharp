@@ -237,9 +237,18 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 
 ## PR #8 桌面交互检查点（2026-11-07）
 
-`Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs` 在 BeginPlay 保存桌面 Pawn 的世界位置和朝向、Camera 的局部位置和朝向、双手目标的局部位置和朝向及当前手别。可用 `CaptureDesktopCheckpoint` 覆盖本次 PIE 的检查点，用 `RestoreDesktopCheckpoint` 放下双手持物、清理桌面输入及预览并复位。正常跟随会把物理手拉向恢复后的目标，`VRSharpHand.cs` 会丢弃前一帧的追踪目标，避免把复位当作连续目标速度。道具留在释放处，需独立复位时由关卡测试逻辑管理。
+`Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs` 在 BeginPlay 保存桌面 Pawn 的世界位置和朝向、Camera 的局部位置和朝向、双手目标的局部位置和朝向及当前手别。可用 `CaptureDesktopCheckpoint` 覆盖本次 PIE 的检查点，用 `RestoreDesktopCheckpoint` 放下双手持物、清理桌面输入及预览并复位。正常跟随会把物理手拉向恢复后的目标，`VRSharpHand.cs` 会丢弃前一帧的追踪目标，避免把复位当作连续目标速度。未登记的道具留在释放处，登记方法见下一节。
 
 1. 生成 UE5.7/UnrealSharp0.1 Glue 并编译。打开使用 `VRSharpDesktopTestPawn` 的无头显测试地图，确认 Origin、Camera、LeftTarget、RightTarget 均在 Pawn 上并保持现有父子层级。将 Pawn 出生点朝向转 90 度，相机局部俯角设为 -15 度。
 2. 在测试 Widget 新增两个按钮，OnClicked 分别接到受控 Pawn 的 `CaptureDesktopCheckpoint` 和 `RestoreDesktopCheckpoint`。显示方法返回的 Bool。若映射键位，可用两个独立的 Bool 动作的 Started 调用同一入口。旧 `ResetHandTargets` 仍只恢复开局手目标。
 3. 无头显 PIE 中移动鼠标，视角应从 90 度和 -15 度平滑变化。移动到手电筒旁，调整左右目标和当前手后保存。分别用按住及锁存方式抓住道具，按扳机，松开测试键或滑条，再点复位。两手持物和工具激活应清除，机位、相机、两目标及当前手恢复，鼠标从该视角继续。确认手经过物理跟随回到目标，附近未持有道具不随 Pawn 传送。改变关卡环境或重进 PIE 后应按需要重新保存。
 4. 托管回归覆盖双手释放、相机与目标复位、鼠标连续性、组件无效与回调重新抓握。完整 UE 编译、PIE 物理与输入、头显实测仍待验收。
+
+## PR #8 桌面检查点复位测试道具（2026-11-07）
+
+`Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs` 的 `DesktopCheckpointProps` 可登记关卡中的测试道具 Actor。保存时记录这些 Actor 的世界变换。恢复时先正常放下桌面双手持物，再复位已登记的道具并清零根刚体线速度和角速度。数组留空时仅复位桌面 Pawn。
+
+1. 在 UE5.7/UnrealSharp0.1 生成 Glue 并编译。在桌面测试地图中复制 `/VRSharp/Tests/BP_VRSharpFlashlight` 或另一件单刚体 Grabbable。确认其根组件是 Movable 的 Primitive，启用 Simulate Physics，同 Actor 上有 Grabbable。把它放在无遮挡的起始位置。选中关卡里的桌面 Pawn 实例，在 `DesktopCheckpointProps` 数组填写该道具 Actor。约束连接、多刚体和需重置自身脚本状态的道具应由各自测试场景处理。
+2. 无头显 PIE 中，在空手且道具就绪时点 `CaptureDesktopCheckpoint`，确认返回 true。再抓取道具、按扳机、移动到别处，点 `RestoreDesktopCheckpoint`。预期双手放下、灯光随释放关闭、道具回到保存位置和朝向，根刚体速度归零。用同一初始布置重复抓取。再放一个未登记的道具作为对照，应留在原处。
+3. 在另一只非桌面手仍持有登记道具时复位，预期返回 false，登记道具不移动，也不替其他手放下。登记道具已销毁、根被替换或停止模拟时，检查点也会拒绝复位。上述拒绝可能已清理桌面输入并释放桌面双手。若 UE 在实际传送阶段拒绝某个道具，方法返回 false，已复位的道具及 Pawn 保留已恢复状态，可在修复配置后重试。
+4. 托管回归覆盖空数组兼容、重复登记、先放下再复位、速度归零、外部持握、根替换和传送失败。UE 编译、PIE 中的碰撞及焊接、头显回归待本地验收。
