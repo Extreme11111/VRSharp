@@ -234,3 +234,12 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 - 在 UE5.7/UnrealSharp0.1 生成 Glue 并编译。在桌面测试地图复制双手工具，保留一个 Grabbable，关闭 SingleHandOnly，将左、右 HandPose 的 TargetComponent 分别指向两个可抓的 Primitive，并设置各自手别。选用桌面左右 Grip 键或 OpenXR 双手抓放。可在调试 Widget 显示两个查询节点的结果，用 C# 订阅事件输出前后手与组件名称。
 - 左手先抓、右手再抓。查询应显示左手和它的组件，右手加入时无主手通知。先松左手应显示右手及其组件，右手继续持物。再松右手时两项查询为空。交换抓取顺序复测，再先松副手，确认主手保持。分别检查特殊姿势、扳机和释放期间的物理焊接。
 - 两个独立数学检查和托管交接回归在云端运行。完整 UE 编译、蓝图 Glue、PIE 中的物理焊接与头显实测待本地验收。
+
+## PR #8 桌面交互检查点（2026-11-07）
+
+`Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs` 在 BeginPlay 保存桌面 Pawn 的世界位置和朝向、Camera 的局部位置和朝向、双手目标的局部位置和朝向及当前手别。可用 `CaptureDesktopCheckpoint` 覆盖本次 PIE 的检查点，用 `RestoreDesktopCheckpoint` 放下双手持物、清理桌面输入及预览并复位。正常跟随会把物理手拉向恢复后的目标，`VRSharpHand.cs` 会丢弃前一帧的追踪目标，避免把复位当作连续目标速度。道具留在释放处，需独立复位时由关卡测试逻辑管理。
+
+1. 生成 UE5.7/UnrealSharp0.1 Glue 并编译。打开使用 `VRSharpDesktopTestPawn` 的无头显测试地图，确认 Origin、Camera、LeftTarget、RightTarget 均在 Pawn 上并保持现有父子层级。将 Pawn 出生点朝向转 90 度，相机局部俯角设为 -15 度。
+2. 在测试 Widget 新增两个按钮，OnClicked 分别接到受控 Pawn 的 `CaptureDesktopCheckpoint` 和 `RestoreDesktopCheckpoint`。显示方法返回的 Bool。若映射键位，可用两个独立的 Bool 动作的 Started 调用同一入口。旧 `ResetHandTargets` 仍只恢复开局手目标。
+3. 无头显 PIE 中移动鼠标，视角应从 90 度和 -15 度平滑变化。移动到手电筒旁，调整左右目标和当前手后保存。分别用按住及锁存方式抓住道具，按扳机，松开测试键或滑条，再点复位。两手持物和工具激活应清除，机位、相机、两目标及当前手恢复，鼠标从该视角继续。确认手经过物理跟随回到目标，附近未持有道具不随 Pawn 传送。改变关卡环境或重进 PIE 后应按需要重新保存。
+4. 托管回归覆盖双手释放、相机与目标复位、鼠标连续性、组件无效与回调重新抓握。完整 UE 编译、PIE 物理与输入、头显实测仍待验收。

@@ -230,6 +230,7 @@ public partial class AVRSharpHand : AActor
 
     private UPhysicsSettings? physicsSettings;
     private bool hasTrackingTarget;
+    internal void ResetTrackingHistory() => hasTrackingTarget = false;
     private FVector previousTargetLocation;
     private FQuat previousTargetRotation;
 

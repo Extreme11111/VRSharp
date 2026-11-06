@@ -315,3 +315,77 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-triggers-") as d:
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project>')
  (p/"Program.cs").write_text(code)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
+
+# Repeatable desktop checkpoint using production Pawn methods and native doubles.
+checkpoint_start = src.index("private readonly record struct DesktopCheckpoint(")
+checkpoint_end = src.index(");", checkpoint_start) + 2
+code = '''using System;
+record struct FVector(double X,double Y,double Z);
+record struct FRotator(double Pitch,double Yaw,double Roll);
+class USceneComponent {
+ public bool Valid=true;
+ public FVector RelativeLocation;
+ public FRotator WorldRotation,RelativeRotation;
+}
+class AVRSharpHand {
+ public bool IsGrabbing;
+ public Action? OnRelease;
+ public int HistoryResets;
+ public void Release(){IsGrabbing=false;OnRelease?.Invoke();}
+ public void ResetTrackingHistory(){HistoryResets++;}
+}
+static class SystemLibrary {
+ public static bool IsValid(object? value)=>value is USceneComponent c?c.Valid:value!=null;
+}
+class Rig {
+ public USceneComponent? Origin=new(),Camera=new(),LeftTarget=new(),RightTarget=new();
+ public AVRSharpHand? LeftHand=new(),RightHand=new();
+ public FVector ActorLocation;
+ public bool ControlLeftHand;
+ public int InputResets;
+ private bool restoringCheckpoint;
+ private DesktopCheckpoint? checkpoint;
+ private void SetActorLocation(FVector value){ActorLocation=value;}
+ private void SetActorRotation(FRotator value){Origin!.WorldRotation=value;}
+ private void ResetDesktopInput(){InputResets++;}
+'''
+code += src[checkpoint_start:checkpoint_end]
+for signature in ["public bool CaptureDesktopCheckpoint()", "public bool RestoreDesktopCheckpoint()",
+                  "private static void ReleaseCheckpointHand(AVRSharpHand? hand)", "public void Look(float yawDelta, float pitchDelta)"]:
+ code += signature + body(signature)
+for signature in ["private bool HasCheckpointComponents()", "private static bool IsHolding("]:
+ start=src.index(signature)
+ code += src[start:src.index(";",start)+1]
+code += '''}
+class Program {
+ static void Check(bool ok){if(!ok)throw new Exception("desktop checkpoint regression");}
+ static void Main(){
+  var rig=new Rig();Check(!rig.RestoreDesktopCheckpoint());
+  rig.ActorLocation=new(100,200,300);rig.Origin!.WorldRotation=new(0,90,0);
+  rig.Camera!.RelativeLocation=new(0,0,20);rig.Camera.RelativeRotation=new(-15,0,0);
+  rig.LeftTarget!.RelativeLocation=new(40,-20,0);rig.RightTarget!.RelativeRotation=new(10,20,30);
+  rig.ControlLeftHand=true;Check(rig.CaptureDesktopCheckpoint());
+  rig.Look(3,2);Check(rig.Origin.WorldRotation.Yaw==93&&rig.Camera.RelativeRotation.Pitch==-13);
+  rig.ActorLocation=default;rig.Camera.RelativeLocation=default;
+  rig.LeftTarget.RelativeLocation=default;rig.RightTarget.RelativeRotation=default;rig.ControlLeftHand=false;
+  rig.LeftHand!.IsGrabbing=rig.RightHand!.IsGrabbing=true;
+  rig.LeftHand.OnRelease=()=>Check(!rig.RestoreDesktopCheckpoint()&&rig.ActorLocation==default);
+  Check(rig.RestoreDesktopCheckpoint()&&rig.ActorLocation==new FVector(100,200,300));
+  Check(rig.Camera.RelativeLocation.Z==20&&rig.Camera.RelativeRotation.Pitch==-15&&rig.ControlLeftHand);
+  Check(rig.LeftTarget.RelativeLocation.Y==-20&&rig.RightTarget.RelativeRotation.Roll==30);
+  Check(!rig.LeftHand.IsGrabbing&&!rig.RightHand.IsGrabbing&&rig.InputResets==1);
+  Check(rig.LeftHand.HistoryResets==1&&rig.RightHand.HistoryResets==1);
+  rig.Look(3,2);Check(rig.Origin.WorldRotation.Yaw==93&&rig.Camera.RelativeRotation.Pitch==-13);
+  rig.Camera.Valid=false;rig.LeftHand.IsGrabbing=true;
+  Check(!rig.RestoreDesktopCheckpoint()&&rig.LeftHand.IsGrabbing&&rig.InputResets==1);
+  rig.Camera.Valid=true;rig.LeftHand.OnRelease=()=>rig.LeftHand.IsGrabbing=true;
+  Check(!rig.RestoreDesktopCheckpoint()&&rig.Origin.WorldRotation.Yaw==93&&rig.InputResets==2);
+  Console.WriteLine("Desktop checkpoint: saved pose, both releases, mouse continuity, invalid setup and re-grab guard passed.");
+ }
+}
+'''
+with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-checkpoint-") as d:
+ p=Path(d)
+ (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project>')
+ (p/"Program.cs").write_text(code)
+ subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)

@@ -368,6 +368,69 @@ public partial class AVRSharpDesktopTestPawn : APawn
     private FVector initialLeftLocation, initialRightLocation;
     private FRotator initialLeftRotation, initialRightRotation;
     private bool targetsCaptured;
+    private DesktopCheckpoint? checkpoint;
+    private bool restoringCheckpoint;
+
+    private readonly record struct DesktopCheckpoint(
+        FVector Location, FRotator Rotation, FVector CameraLocation, FRotator CameraRotation,
+        FVector LeftLocation, FRotator LeftRotation, FVector RightLocation, FRotator RightRotation,
+        bool ControlLeft);
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool CaptureDesktopCheckpoint()
+    {
+        if (!HasCheckpointComponents()) return false;
+        checkpoint = new DesktopCheckpoint(ActorLocation, Origin!.WorldRotation, Camera!.RelativeLocation, Camera.RelativeRotation,
+            LeftTarget!.RelativeLocation, LeftTarget.RelativeRotation,
+            RightTarget!.RelativeLocation, RightTarget.RelativeRotation, ControlLeftHand);
+        return true;
+    }
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool RestoreDesktopCheckpoint()
+    {
+        if (restoringCheckpoint || checkpoint is not { } saved || !HasCheckpointComponents()) return false;
+        restoringCheckpoint = true;
+        try
+        {
+            ReleaseCheckpointHand(LeftHand);
+            ReleaseCheckpointHand(RightHand);
+            ResetDesktopInput();
+            // Release callbacks may change the setup or take another grip.
+            if (!HasCheckpointComponents() || IsHolding(LeftHand) || IsHolding(RightHand)) return false;
+
+            SetActorLocation(saved.Location);
+            SetActorRotation(saved.Rotation);
+            Camera!.RelativeLocation = saved.CameraLocation;
+            Camera.RelativeRotation = saved.CameraRotation;
+            LeftTarget!.RelativeLocation = saved.LeftLocation;
+            LeftTarget.RelativeRotation = saved.LeftRotation;
+            RightTarget!.RelativeLocation = saved.RightLocation;
+            RightTarget.RelativeRotation = saved.RightRotation;
+            ControlLeftHand = saved.ControlLeft;
+            if (LeftHand is { } left && SystemLibrary.IsValid(left)) left.ResetTrackingHistory();
+            if (RightHand is { } right && SystemLibrary.IsValid(right)) right.ResetTrackingHistory();
+            return true;
+        }
+        finally
+        {
+            restoringCheckpoint = false;
+        }
+    }
+
+    private bool HasCheckpointComponents()
+        => Origin is { } origin && SystemLibrary.IsValid(origin)
+        && Camera is { } camera && SystemLibrary.IsValid(camera)
+        && LeftTarget is { } left && SystemLibrary.IsValid(left)
+        && RightTarget is { } right && SystemLibrary.IsValid(right);
+
+    private static bool IsHolding(AVRSharpHand? hand)
+        => hand is not null && SystemLibrary.IsValid(hand) && hand.IsGrabbing;
+
+    private static void ReleaseCheckpointHand(AVRSharpHand? hand)
+    {
+        if (IsHolding(hand)) hand!.Release();
+    }
 
     // Restore authored camera-local targets without releasing either held object.
     [UFunction(FunctionFlags.BlueprintCallable)]
@@ -385,7 +448,6 @@ public partial class AVRSharpDesktopTestPawn : APawn
 
     private FVector moveInput, handInput, handRotateInput;
     public float HandRotateSpeed { get; set; } = 90f;
-    private float yaw, pitch;
     private float trigger;
     public float MoveSpeed { get; set; } = 250f;
     public float HandSpeed { get; set; } = 60f;
@@ -402,11 +464,15 @@ public partial class AVRSharpDesktopTestPawn : APawn
     [UFunction(FunctionFlags.BlueprintCallable)]
     public void Look(float yawDelta, float pitchDelta)
     {
-        if (!float.IsFinite(yawDelta) || !float.IsFinite(pitchDelta)) return;
-        yaw = (yaw + yawDelta) % 360f;
-        pitch = Math.Clamp(pitch + pitchDelta,-85f,85f);
-        SetActorRotation(new FRotator(0,yaw,0));
-        if (Camera is not null) Camera.RelativeRotation = new FRotator(pitch,0,0);
+        if (!float.IsFinite(yawDelta) || !float.IsFinite(pitchDelta) ||
+            Origin is not { } origin || !SystemLibrary.IsValid(origin)) return;
+        FRotator rotation = origin.WorldRotation;
+        SetActorRotation(new FRotator(rotation.Pitch, (rotation.Yaw + yawDelta) % 360, rotation.Roll));
+        if (Camera is { } camera && SystemLibrary.IsValid(camera))
+        {
+            var view = camera.RelativeRotation;
+            camera.RelativeRotation = new FRotator(Math.Clamp(view.Pitch + pitchDelta, -85, 85), view.Yaw, view.Roll);
+        }
     }
     [UFunction(FunctionFlags.BlueprintCallable)]
     public void SelectLeftHand(bool left)
@@ -496,6 +562,7 @@ public partial class AVRSharpDesktopTestPawn : APawn
         LeftHand = PrepareDesktopHand(LeftHand, LeftHandClass, LeftTarget, true, out spawnedLeftHand);
         RightHand = PrepareDesktopHand(RightHand, RightHandClass, RightTarget, false, out spawnedRightHand);
         desktopHandsPrepared = true;
+        CaptureDesktopCheckpoint();
     }
     private AVRSharpHand? PrepareDesktopHand(AVRSharpHand? assignedHand, TSubclassOf<AVRSharpHand> handClass,
         USceneComponent? target, bool isLeft, out AVRSharpHand? spawnedHand)
