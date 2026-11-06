@@ -193,3 +193,8 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 `Script/ManagedVRSharp/Core/VRSharpHand.cs` 和 `VRSharpMathHelper.cs` 现在按 Palm 的世界姿态求解显式抓点对齐，补偿 Palm 相对手 Actor 的位置和旋转。显式抓点应保存期望的 Palm 世界坐标系。旧 GrabPoses 名称表回退继续按手 Actor 旋转解释，普通抓取沿用原路径。
 在 UE5.7/UnrealSharp0.1 生成 Glue 并编译。复制一套测试手蓝图，将 Palm 局部位置偏移并绕另一个轴旋转 30 度。对 `/VRSharp/Tests/BP_VRSharpFlashlight` 设置左右抓点的 TargetComponent、旋转和 AnimationKey。普通桌面抓取和指定姿势抓取后，在调试器读取 Palm 与 HandPose 的世界位置和旋转，预期一致。用两个不同角度抓住同一道具并释放，验证显示姿势、扳机和淡出，再用 OpenXR 重跑。若已按旧显式实现补过旋转，重新按期望 Palm 坐标调整抓点。原名称表资产无需迁移。
 独立数学测试覆盖非零偏移与不交换旋转组合。UE 编译、世界变换应用、PIE、物理焊接和头显未验证。
+
+## PR #8 双手扳机联锁（2026-11-06）
+`Script/ManagedVRSharp/Core/VRSharpGrabbable.cs` 新增 `RequireTwoTriggerHands`，在道具蓝图的 Grab 组件 Details 中开启。用于验收的 `/VRSharp/Tests/BP_VRSharpFlashlight` 沿用现有 Body、Lamp、左右手抓点及动画配置。保持 SingleHandOnly 关闭，并为两手提供兼容抓点。使用已配置的按下和松开阈值，例如 0.75 和 0.55。联锁按同一 Grabbable 上两个不同的持有手 Actor 计数。在编辑器配置该选项，默认关闭时仍由任一只手点亮。模拟扳机值和抓握动画照常更新。
+
+先用 UE5.7/UnrealSharp0.1 生成 Glue 并编译。无头显 PIE 中用桌面锁存抓握让两手都抓住手电筒，再用 DesktopLeftTrigger、DesktopRightTrigger 或两条滑杆测试。只按一侧时灯保持关闭，两侧都越过按下阈值才亮，松开一侧到释放阈值或直接放下任一只手时立即熄灭。重新抓取时不能继承上一次的激活。检查 `GetIsTriggerActive` 与现有 `TriggerActivationChanged` 通知一致，并用 OpenXR 重跑。托管回归覆盖默认行为、联锁、释放和重新抓取，UE 编译、PIE 和头显待验。

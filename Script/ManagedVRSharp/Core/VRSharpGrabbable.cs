@@ -54,8 +54,12 @@ public partial class UVRSharpGrabbable : UActorComponent
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial float TriggerReleaseThreshold { get; set; }
 
+    // Authoring option: an interlocked tool needs two distinct gripping hands to press.
+    [UProperty(PropertyFlags.BlueprintReadOnly | PropertyFlags.EditAnywhere)]
+    public partial bool RequireTwoTriggerHands { get; set; }
+
     private readonly HashSet<AVRSharpHand> activeTriggerHands = new();
-    public bool IsTriggerActive => activeTriggerHands.Count > 0;
+    public bool IsTriggerActive => activeTriggerHands.Count >= (RequireTwoTriggerHands ? 2 : 1);
 
     [UFunction(FunctionFlags.BlueprintCallable)]
     public bool GetIsTriggerActive() => IsTriggerActive;
