@@ -374,13 +374,27 @@ public partial class AVRSharpDesktopTestPawn : APawn
             old.SetGrabTrigger((ControlLeftHand ? leftTrigger : rightTrigger) ?? 0);
         trigger = 0;
         handInput = handRotateInput = FVector.Zero;
-        if (ActiveHand is { } previous && SystemLibrary.IsValid(previous)) previous.ClearFingerInput();
+        if (ActiveHand is { } previous && SystemLibrary.IsValid(previous))
+        {
+            previous.StopGrabPosePreview();
+            previous.ClearFingerInput();
+        }
         fingerInput = FVector.Zero;
         ControlLeftHand = left;
     }
     [UFunction(FunctionFlags.BlueprintCallable)]
     public bool GrabActiveHand()
         => ActiveHand is { } hand && SystemLibrary.IsValid(hand) && hand.TryGrab();
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool PreviewActiveHandPose(UVRSharpHandPose pose)
+        => ActiveHand is { } hand && SystemLibrary.IsValid(hand) && hand.StartGrabPosePreview(pose);
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public void StopActiveHandPosePreview()
+    {
+        if (ActiveHand is { } hand && SystemLibrary.IsValid(hand)) hand.StopGrabPosePreview();
+    }
+
     [UFunction(FunctionFlags.BlueprintCallable)]
     public bool GrabActiveHandAtPose(UVRSharpGrabbable grabbable, UVRSharpHandPose pose)
         => ActiveHand is { } hand && SystemLibrary.IsValid(hand) && hand.TryGrabAtPose(grabbable, pose);
@@ -411,8 +425,16 @@ public partial class AVRSharpDesktopTestPawn : APawn
         ReleaseDesktopGrip();
         leftTrigger = rightTrigger = null;
         fingerInput = FVector.Zero;
-        if (LeftHand is { } lh && SystemLibrary.IsValid(lh)) lh.ClearFingerInput();
-        if (RightHand is { } rh && SystemLibrary.IsValid(rh)) rh.ClearFingerInput();
+        if (LeftHand is { } lh && SystemLibrary.IsValid(lh))
+        {
+            lh.StopGrabPosePreview();
+            lh.ClearFingerInput();
+        }
+        if (RightHand is { } rh && SystemLibrary.IsValid(rh))
+        {
+            rh.StopGrabPosePreview();
+            rh.ClearFingerInput();
+        }
         moveInput = handInput = handRotateInput = FVector.Zero;
         trigger = 0;
         if (LeftHand is { } left && SystemLibrary.IsValid(left)) left.SetGrabTrigger(0);
@@ -491,8 +513,12 @@ public partial class AVRSharpDesktopTestPawn : APawn
         if (hand is null || !SystemLibrary.IsValid(hand) || (!active && dedicatedTrigger is null)) return;
         float triggerValue = Math.Max(dedicatedTrigger ?? 0, active ? trigger : 0);
         if (hand.IsGrabbing)
+        {
             hand.SetGrabTrigger(triggerValue);
-        else if (active)
+            return;
+        }
+        hand.SetGrabPosePreviewTrigger(triggerValue);
+        if (active)
             hand.SetFingerInput((float)fingerInput.X, Math.Max((float)fingerInput.Y, triggerValue), (float)fingerInput.Z);
         else
             hand.SetFingerInput(0, triggerValue, 0);

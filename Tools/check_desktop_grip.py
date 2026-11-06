@@ -247,7 +247,9 @@ code = '''using System;
 struct FVector { public double X,Y,Z; public static FVector Zero=>default; }
 class AVRSharpHand {
  public bool IsGrabbing=true;
- public float HeldTrigger,Index;
+ public float HeldTrigger,Index,PreviewTrigger;
+ public void StopGrabPosePreview(){PreviewTrigger=0;}
+ public void SetGrabPosePreviewTrigger(float value){PreviewTrigger=value;}
  public void SetGrabTrigger(float value){if(IsGrabbing)HeldTrigger=value;}
  public void ClearFingerInput(){Index=0;}
  public void SetFingerInput(float thumb,float index,float grasp){Index=index;}
@@ -276,8 +278,8 @@ class Program {
   Check(rig.LeftHand.HeldTrigger==1&&rig.RightHand.HeldTrigger==.8f);
   rig.SelectLeftHand(false);rig.Sample();Check(rig.LeftHand.HeldTrigger==.75f&&rig.RightHand.HeldTrigger==.8f);
   rig.SetHandTrigger(true,0);rig.Sample();Check(rig.LeftHand.HeldTrigger==0&&rig.RightHand.HeldTrigger==.8f);
-  rig.LeftHand.IsGrabbing=false;rig.SetHandTrigger(true,.5f);rig.Sample();Check(rig.LeftHand.Index==.5f);
-  rig.ResetDesktopInput();rig.Sample();Check(rig.LeftHand.Index==0&&rig.RightHand.HeldTrigger==0);
+  rig.LeftHand.IsGrabbing=false;rig.SetHandTrigger(true,.5f);rig.Sample();Check(rig.LeftHand.Index==.5f&&rig.LeftHand.PreviewTrigger==.5f);
+  rig.ResetDesktopInput();rig.Sample();Check(rig.LeftHand.Index==0&&rig.LeftHand.PreviewTrigger==0&&rig.RightHand.HeldTrigger==0);
   Console.WriteLine("Desktop dual triggers: simultaneous hold, switch, isolated release, empty hand and reset passed.");
  }
 }

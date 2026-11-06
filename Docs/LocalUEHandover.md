@@ -208,3 +208,11 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 4. 桌面模式按到半扳机后放下，工具扳机值和开关应立即归零，但视觉淡出应从松手前的按压姿势开始。淡出完成后重新抓取或换成普通物体，不能带入上一次按压值。用左右手及 OpenXR 重跑，检查动画资源不同也能使用同一 AnimBP 逻辑。
 
 `Script/ManagedVRSharp/Core/VRSharpHand.cs` 只在动画淡出保留视觉采样，原 `GetGrabPoseTrigger` 仍返回实时业务输入。桌面放下入口交给手的 Release 统一归零，避免提前丢失淡出采样。本轮未制作序列和 AnimBP 资产。托管回归覆盖释放时视觉采样保留与逻辑清零。完整 UE 编译、动画图、PIE 和头显待验。
+
+## PR #8 桌面空手预览特殊姿势（2026-11-06）
+`Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs` 的 `PreviewActiveHandPose` 和 `StopActiveHandPosePreview` 调用 `VRSharpHand.cs` 的视觉预览入口。可在不抓取、不启动 XR 的桌面场景预览一个 HandPose 的握住和按压动画。接受当前手别允许的有效 HandPose，并要求当前手为空手。预览不占用抓点、不改手掌物理位置、不发 Grabbed/Released 或工具激活事件。
+
+1. 在无头显的桌面测试地图放置 `/VRSharp/Tests/BP_VRSharpFlashlight`。选其 LeftGrip / RightGrip，配置 GripAnimation、PressedAnimation 和淡入淡出。手 AnimBP 仍按上一节读取 `GetAnimationGrabPose`、`GetGrabAnimationTrigger` 和 `GetGrabPoseBlendWeight`。
+2. 在测试 Widget 中创建 Preview 和 Stop 按钮，分别连接 Pawn 的两个方法。Preview 参数用关卡道具的抓点引用。也可由调试按键调用。按现有桌面扳机，或通过滑条调用 `SetTrigger` 调整预览按压。无需接触道具。
+3. 验证预览期间灯保持关闭、GrabCount 为 0。切换手、Stop 或 ResetDesktopInput 会结束预览并按配置淡出。真正抓取成功会接管视觉姿势。握住道具时再次点 Preview 应返回 false，当前持物动画继续。验收左右手限制及预览期间销毁抓点后的还原。
+4. 本地先做 UE5.7/UnrealSharp0.1 Glue 编译，再做普通桌面 PIE。独立数学和托管回归覆盖预览隔离、触发路由、淡出与真实抓握接管。完整 UE 编译、蓝图、PIE 和头显待验。

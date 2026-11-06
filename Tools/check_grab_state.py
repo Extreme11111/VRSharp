@@ -147,7 +147,8 @@ class UVRSharpGrabbable : Native {
  public void Detach(AVRSharpHand hand){if(!Valid)throw new Exception("invalid native detach");Detaches++;hand.IsGrabbing=false;hand.GrabbedObject=null;}
 }
 class AVRSharpHand {
- public bool IsGrabbing=true,poseExiting;
+ public bool IsGrabbing=true,poseExiting,previewingGrabPose;
+ public float previewPoseTrigger;
  public bool useAuthoredFingerWeights=true,useTriggerBlend=true;
  public float activePoseTrigger=.8f,exitPoseTrigger,poseBlendWeight=1,Weights=1;
  public UVRSharpGrabbable? GrabbedObject=new();
@@ -189,5 +190,5 @@ class Program {
 with tempfile.TemporaryDirectory(prefix="vrsharp-hand-release-") as d:
  p=Path(d)
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project>')
- (p/"Program.cs").write_text(release_code+method("public void Release()")+method("public float GetGrabAnimationTrigger()")+release_tests)
+ (p/"Program.cs").write_text(release_code+method("public void Release()")+method("public float GetGrabAnimationTrigger()")+method("private void EndPoseAnimation(")+release_tests)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)

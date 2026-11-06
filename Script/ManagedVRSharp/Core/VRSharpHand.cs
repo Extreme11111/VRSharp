@@ -97,6 +97,8 @@ public partial class AVRSharpHand : AActor
     private float poseBlendWeight;
     private bool poseExiting;
     private float exitPoseTrigger;
+    private bool previewingGrabPose;
+    private float previewPoseTrigger;
 
     // Visual pose survives logical release until its configured fade has completed.
     [UFunction(FunctionFlags.BlueprintCallable)]
@@ -111,7 +113,46 @@ public partial class AVRSharpHand : AActor
     public float GetGrabAnimationTrigger()
     {
         if (GetAnimationGrabPose() is null) return 0;
-        return poseExiting ? exitPoseTrigger : activePoseTrigger;
+        if (poseExiting) return exitPoseTrigger;
+        return previewingGrabPose ? previewPoseTrigger : activePoseTrigger;
+    }
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool StartGrabPosePreview(UVRSharpHandPose pose)
+    {
+        if (IsGrabbing || pose is null || !SystemLibrary.IsValid(pose) ||
+            (IsLeft ? pose.DisableLeftHand : pose.DisableRightHand)) return false;
+        BeginPoseAnimation(pose);
+        previewingGrabPose = true;
+        return true;
+    }
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool SetGrabPosePreviewTrigger(float value)
+    {
+        if (!previewingGrabPose || IsGrabbing || GetAnimationGrabPose() is null || !float.IsFinite(value)) return false;
+        previewPoseTrigger = Math.Clamp(value, 0f, 1f);
+        return true;
+    }
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public void StopGrabPosePreview()
+    {
+        if (previewingGrabPose) EndPoseAnimation(previewPoseTrigger);
+    }
+
+    private void EndPoseAnimation(float releasedTrigger)
+    {
+        previewingGrabPose = false;
+        previewPoseTrigger = 0;
+        var pose = GetAnimationGrabPose();
+        poseExiting = pose is not null && float.IsFinite(pose.ExitBlendSeconds) && pose.ExitBlendSeconds > 0;
+        exitPoseTrigger = poseExiting ? releasedTrigger : 0;
+        if (!poseExiting)
+        {
+            animationPose = null;
+            poseBlendWeight = 0;
+        }
     }
 
     private void BeginPoseAnimation(UVRSharpHandPose? pose)
@@ -119,6 +160,8 @@ public partial class AVRSharpHand : AActor
         animationPose = pose;
         poseExiting = false;
         exitPoseTrigger = 0;
+        previewingGrabPose = false;
+        previewPoseTrigger = 0;
         poseBlendWeight = pose is not null && float.IsFinite(pose.EnterBlendSeconds) && pose.EnterBlendSeconds > 0 ? 0 : 1;
         if (pose is null) poseBlendWeight = 0;
     }
@@ -126,7 +169,7 @@ public partial class AVRSharpHand : AActor
     private void AdvancePoseAnimation(float deltaSeconds)
     {
         var pose = GetAnimationGrabPose();
-        if (pose is null) { animationPose = null; poseBlendWeight = 0; poseExiting = false; return; }
+        if (pose is null) { BeginPoseAnimation(null); return; }
         if (!float.IsFinite(deltaSeconds) || deltaSeconds <= 0) return;
         float duration = poseExiting ? pose.ExitBlendSeconds : pose.EnterBlendSeconds;
         float step = float.IsFinite(duration) && duration > 0 ? deltaSeconds / duration : 1;
@@ -844,14 +887,7 @@ public partial class AVRSharpHand : AActor
         // 松开抓握时，手指回到张开（空手时再按原有输入逻辑调整）
         var exitedPose = activeGrabPose;
         activeGrabPose = null;
-        var visualPose = GetAnimationGrabPose();
-        poseExiting = visualPose is not null && float.IsFinite(visualPose.ExitBlendSeconds) && visualPose.ExitBlendSeconds > 0;
-        exitPoseTrigger = poseExiting ? releasedTrigger : 0;
-        if (!poseExiting)
-        {
-            animationPose = null;
-            poseBlendWeight = 0;
-        }
+        EndPoseAnimation(releasedTrigger);
         activePoseTrigger = 0;
         useAuthoredFingerWeights = false;
         useTriggerBlend = false;

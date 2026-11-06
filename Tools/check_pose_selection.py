@@ -18,16 +18,24 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-grip-") as d:
 
 # Visual lifecycle methods from production; native component validity is doubled.
 code='''using System;
-class UVRSharpHandPose {public float EnterBlendSeconds,ExitBlendSeconds;}
+class UVRSharpHandPose {public float EnterBlendSeconds,ExitBlendSeconds;public bool DisableLeftHand,DisableRightHand;}
 static class SystemLibrary {public static bool IsValid(object x)=>x!=null;}
 class Rig {
-private UVRSharpHandPose? animationPose; private float poseBlendWeight, exitPoseTrigger; private bool poseExiting;
+private UVRSharpHandPose? animationPose; private float poseBlendWeight, exitPoseTrigger, previewPoseTrigger;
+private bool poseExiting, previewingGrabPose;
+public bool IsGrabbing, IsLeft;
+public float activePoseTrigger;
 public UVRSharpHandPose? GetAnimationGrabPose()=>animationPose;
 public float Weight=>poseBlendWeight;public bool Present=>animationPose!=null;
 public void Exit(){poseExiting=true;}
 public void BeginPoseAnimation(UVRSharpHandPose? pose)
 '''
 code+=body('private void BeginPoseAnimation(')+' public void AdvancePoseAnimation(float deltaSeconds) '+body('private void AdvancePoseAnimation(')
+for signature in ['public bool StartGrabPosePreview(UVRSharpHandPose pose)',
+                  'public bool SetGrabPosePreviewTrigger(float value)', 'public void StopGrabPosePreview()',
+                  'public float GetGrabAnimationTrigger()', 'private void EndPoseAnimation(float releasedTrigger)']:
+ code += signature + body(signature)
+
 code+='''}
 class Program {static void Check(bool b){if(!b)throw new Exception("pose animation lifecycle");}
 static void Main(){foreach(int hz in new[]{30,60,120}){var r=new Rig();var pose=new UVRSharpHandPose{EnterBlendSeconds=.5f,ExitBlendSeconds=.25f};
@@ -37,7 +45,15 @@ r.Exit();for(int i=0;i<hz;i++)r.AdvancePoseAnimation(1f/hz);Check(!r.Present&&r.
 r.BeginPoseAnimation(pose);r.AdvancePoseAnimation(.125f);Check(r.Weight==.25f);r.Exit();r.AdvancePoseAnimation(.1f);Check(!r.Present);
 r.BeginPoseAnimation(pose);r.AdvancePoseAnimation(float.NaN);Check(r.Weight==0);r.BeginPoseAnimation(null);Check(!r.Present);
 r.BeginPoseAnimation(new());Check(r.Weight==1);r.Exit();r.AdvancePoseAnimation(.01f);Check(!r.Present);
-}Console.WriteLine("Pose visual lifecycle production subset: entry, hold, exit, interruption, legacy defaults and 30/60/120Hz passed.");}}
+r.IsLeft=true;pose.DisableLeftHand=true;Check(!r.StartGrabPosePreview(pose));pose.DisableLeftHand=false;
+Check(r.StartGrabPosePreview(pose)&&r.SetGrabPosePreviewTrigger(.6f));r.AdvancePoseAnimation(.5f);
+Check(r.GetGrabAnimationTrigger()==.6f&&r.activePoseTrigger==0&&!r.IsGrabbing);
+r.StopGrabPosePreview();Check(!r.SetGrabPosePreviewTrigger(1)&&r.GetGrabAnimationTrigger()==.6f);
+r.AdvancePoseAnimation(.25f);Check(!r.Present&&r.GetGrabAnimationTrigger()==0);
+Check(r.StartGrabPosePreview(pose)&&r.SetGrabPosePreviewTrigger(1));
+r.IsGrabbing=true;r.BeginPoseAnimation(pose);r.StopGrabPosePreview();
+Check(r.Present&&r.GetGrabAnimationTrigger()==0&&!r.StartGrabPosePreview(pose));
+}Console.WriteLine("Pose visual lifecycle production subset: entry, hold, exit, interruption, legacy defaults, preview isolation and 30/60/120Hz passed.");}}
 '''
 with tempfile.TemporaryDirectory(prefix="vrsharp-pose-animation-") as d:
  p=Path(d)
