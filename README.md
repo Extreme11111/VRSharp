@@ -32,8 +32,12 @@ python3 Tools/check_host_collision.py /path/to/host/Config/DefaultEngine.ini
 ```
 
 Pass any relevant platform Engine INI files after the base file in load order.
-The check reports reserved slot collisions and incompatible VRSharp profiles. See
-[the migration handover](Docs/LocalUEHandover.md) for Blueprint remapping and PIE acceptance.
+For a host with occupied reference slots, add `--plan` to propose free slots and
+print INI entries for missing channels. After reviewing and applying the plan,
+use `--allow-remapped-channels` to check the chosen custom slots, channel
+semantics and required profiles. The default check still requires the reference
+slot numbers. See [the migration handover](Docs/LocalUEHandover.md) for Blueprint
+remapping and PIE acceptance.
 
 ## Sources and checks
 

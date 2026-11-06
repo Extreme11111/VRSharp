@@ -12,6 +12,8 @@ REQUIRED = {
     "profiles": ("VRPlayer", "VRHand"),
 }
 REFERENCE = Path(__file__).resolve().parents[1] / "Examples/VRSharpLab/DefaultEngine.ini"
+CUSTOM_SLOTS = tuple(f"ECC_GameTraceChannel{i}" for i in range(1, 19))
+CUSTOM_SLOT_KEYS = {slot.casefold() for slot in CUSTOM_SLOTS}
 
 
 def read_arrays(paths):
@@ -92,13 +94,65 @@ def index_named(entries):
     return by_name
 
 
-def check(paths):
-    reference = read_arrays([REFERENCE])
-    host = read_arrays(paths)
+def channel_owners(channels):
+    owners = defaultdict(list)
+    for entries in channels.values():
+        for entry in entries:
+            owners[entry.get("channel", "").casefold()].append(entry["name"])
+    return owners
+
+
+def plan_channels(reference, host):
+    key = ARRAYS[0]
+    actual = index_named(host[key])
+    owners = channel_owners(actual)
+    reference_lines = {fields(value)["name"].casefold(): value for value in reference[key]}
+    missing = []
+    selected = {}
+    issues = []
+    for name in REQUIRED[key]:
+        value = reference_lines[name.casefold()]
+        legacy = fields(value)["channel"]
+        entries = actual.get(name.casefold(), [])
+        if not entries:
+            missing.append((name, legacy, value))
+            continue
+        slot = entries[0].get("channel", "<missing>")
+        if len(entries) != 1 or slot.casefold() not in CUSTOM_SLOT_KEYS or len(owners[slot.casefold()]) != 1:
+            issues.append(f"{name}: resolve the existing definitions or occupied slot ({slot}) before planning.")
+        else:
+            selected[name] = (legacy, slot, "keep")
+
+    free = [slot for slot in CUSTOM_SLOTS if slot.casefold() not in owners]
+    preferred = {legacy for _, legacy, _ in missing}
+    fallback = iter(slot for slot in free if slot not in preferred)
+    additions = []
+    for name, legacy, value in missing:
+        slot = legacy if legacy in free else next(fallback, None)
+        if slot is None:
+            issues.append(f"{name}: no free custom collision slot in the supplied layers.")
+            continue
+        selected[name] = (legacy, slot, "add")
+        additions.append("+DefaultChannelResponses=" + value.replace(f"Channel={legacy},", f"Channel={slot},", 1))
+
+    if issues:
+        return issues, []
+    lines = []
+    for name in REQUIRED[key]:
+        legacy, slot, action = selected[name]
+        lines.append(f"{name}: {legacy} -> {slot} ({action})")
+    if additions:
+        lines.extend(["", "Review these entries for [/Script/Engine.CollisionProfile]:", *additions, ""])
+    lines.append("Review the required profiles separately and rerun the check after migration.")
+    return [], lines
+
+
+def check(reference, host, allow_remapped=False):
     issues = []
     for key, names in REQUIRED.items():
         expected = index_named(reference[key])
         actual = index_named(host[key])
+        owners = channel_owners(actual) if key == ARRAYS[0] else {}
         for name in names:
             wanted = expected[name.casefold()][0]
             entries = actual.get(name.casefold(), [])
@@ -112,7 +166,10 @@ def check(paths):
                     "collisionenabled", "objecttypename")
                 for setting in keys:
                     found = current.get(setting, "<missing>")
-                    if found.casefold() != wanted[setting].casefold():
+                    if setting == "channel" and allow_remapped:
+                        if found.casefold() not in CUSTOM_SLOT_KEYS:
+                            issues.append(f"{name}: channel {found} is not a project custom collision slot.")
+                    elif found.casefold() != wanted[setting].casefold():
                         issues.append(f"{name}: {setting} is {found}, expected {wanted[setting]}.")
                 if key == "profiles":
                     responses = {}
@@ -127,22 +184,31 @@ def check(paths):
                         channel = response["channel"]
                         if responses.get(channel.casefold()) != response["response"].casefold():
                             issues.append(f"{name}: expected {response['response']} response to {channel}.")
-            if key == ARRAYS[0]:
-                slot = wanted["channel"]
-                conflicts = sorted({entry["name"] for other, definitions in actual.items()
-                                    if other != name.casefold() for entry in definitions
-                                    if entry.get("channel", "").casefold() == slot.casefold()})
-                if conflicts:
+            if key == ARRAYS[0] and (not allow_remapped or len(entries) == 1):
+                slot = entries[0].get("channel", "<missing>") if allow_remapped else wanted["channel"]
+                conflicts = sorted({owner for owner in owners.get(slot.casefold(), []) if owner.casefold() != name.casefold()})
+                if conflicts and allow_remapped:
+                    issues.append(f"{name}: {slot} also used by {', '.join(conflicts)}.")
+                elif conflicts:
                     issues.append(f"{slot} reserved by VRSharp for {name}: also used by {', '.join(conflicts)}.")
     return issues
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--plan", action="store_true", help="propose free slots for missing channels")
+    mode.add_argument("--allow-remapped-channels", action="store_true", help="check valid, unique custom slots instead of fixed reference slots")
     parser.add_argument("engine_ini", type=Path, nargs="+", help="DefaultEngine.ini and optional override layers, in order")
     args = parser.parse_args()
     try:
-        issues = check(args.engine_ini)
+        reference = read_arrays([REFERENCE])
+        host = read_arrays(args.engine_ini)
+        if args.plan:
+            issues, lines = plan_channels(reference, host)
+        else:
+            issues = check(reference, host, args.allow_remapped_channels)
+            lines = ["VRSharp collision channels and required profiles passed in the supplied layers."]
     except (OSError, UnicodeError, ValueError) as exc:
         print(f"Cannot check collision configuration: {exc}", file=sys.stderr)
         return 2
@@ -151,7 +217,7 @@ def main():
             print(issue, file=sys.stderr)
         print("Review host collision mappings and serialized Blueprint channels before remapping.", file=sys.stderr)
         return 1
-    print("VRSharp collision channels and required profiles match the reference in the supplied layers.")
+    print("\n".join(lines))
     return 0
 
 

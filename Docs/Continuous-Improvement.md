@@ -39,3 +39,5 @@ Run `bash Tools/cloud/check-environment.sh`. For LFS proof, download the reposit
 - 2026-10-31 verification update: GitHub Actions run 41211738115 succeeded, including cloud-repository-access (branch push, new LFS object upload, independent clone/download and byte comparison; probe branch removed). A separate fresh local clone also completed git lfs pull and git lfs fsck. A later Work Cloud creation request returned a queued client identifier, but no usable cloud conversation ID or schedule has been confirmed. This remains pending; Actions access does not prove the queued Work Cloud identity.
 
 - 2026-11-06 独立迁移功能分支 `cloud/host-collision-preflight` 提供宿主 Engine INI 碰撞预检。识别所需通道缺失、槽位占用、类型/响应差异及常见数组覆盖。工具只读，仓库参考与冲突样本回归通过。蓝图通道迁移和 UE 验收见 LocalUEHandover。
+
+- 2026-11-06 PR #9 新增宿主碰撞通道迁移规划和重映射验收。规划保留宿主槽位，为缺失通道生成待审 INI 条目。回归覆盖将建议写入独立测试层后重新检查，以及槽位冲突和耗尽。UE 中的序列化通道复核和实测见 LocalUEHandover。
