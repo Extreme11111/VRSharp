@@ -136,3 +136,5 @@ Combined math, pose/trigger, desktop grip, event state and 192 admission policy 
 - 2026-11-06 PR #8 特殊抓点增加抓握与按压序列槽，共享 AnimBP 可以按当前抓点切换资源。释放淡出保留视觉采样，业务扳机立即归零。接线及左右手切换验收见 LocalUEHandover，未制作 UE 资产。独立数学和托管回归与完整 UE 验收分别记录。
 
 - 2026-11-06 PR #8 增加桌面空手姿势预览，使用同一抓点动画和扳机采样，支持切手、停止和真实抓取接管，保持持有及道具激活状态独立。配置、Widget 接线和验收见 LocalUEHandover。
+
+- 2026-11-07 PR #8 增加独立的桌面左右手抓放动作，可同时按住并分别释放。抓握代次区分同一手对同一道具的前后两次抓握，避免旧动作松开影响新抓握。本地输入映射与验收见 LocalUEHandover。

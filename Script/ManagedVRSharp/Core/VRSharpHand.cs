@@ -238,8 +238,12 @@ public partial class AVRSharpHand : AActor
 
     public event Action<AVRSharpHand, UVRSharpGrabbable, UPrimitiveComponent>? Grabbed;
     public event Action<AVRSharpHand, UVRSharpGrabbable, UPrimitiveComponent>? Released;
+    internal ulong GrabRevision { get; private set; }
     internal void NotifyGrabbed(UVRSharpGrabbable item, UPrimitiveComponent component)
-        => Grabbed?.Invoke(this, item, component);
+    {
+        GrabRevision = unchecked(GrabRevision + 1);
+        Grabbed?.Invoke(this, item, component);
+    }
     internal void NotifyReleased(UVRSharpGrabbable item, UPrimitiveComponent component)
         => Released?.Invoke(this, item, component);
 

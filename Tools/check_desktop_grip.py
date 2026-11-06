@@ -16,20 +16,22 @@ class UVRSharpGrabbable {public int TriggerNotifications; public void NotifyGrab
 static class SystemLibrary {public static bool IsValid(object x)=>x!=null;}
 class AVRSharpHand {
  public bool IsGrabbing,CanGrab=true;public UVRSharpGrabbable? GrabbedObject;public int Releases;
- public bool TryGrab(){if(!CanGrab||IsGrabbing)return false;IsGrabbing=true;GrabbedObject=new();return true;}
+ public ulong GrabRevision;
+ public UVRSharpGrabbable Target=new();
+ public bool TryGrab(){if(!CanGrab||IsGrabbing)return false;IsGrabbing=true;GrabbedObject=Target;GrabRevision++;return true;}
  public void SetGrabTrigger(float x){}
  public void Release(){IsGrabbing=false;GrabbedObject=null;Releases++;}
 }
 class Rig {
- public AVRSharpHand? ActiveHand;
+ public AVRSharpHand? ActiveHand,LeftHand,RightHand;
  private float trigger;
  private bool targetsCaptured=true;
  private FVector handInput,handRotateInput,initialLeftLocation,initialRightLocation;
  private FRotator initialLeftRotation,initialRightRotation;
  public Target? LeftTarget=new(),RightTarget=new();
- private AVRSharpHand? gripInputHand;
- private UVRSharpGrabbable? gripInputObject;
- public void Press()
+ private (AVRSharpHand Hand, ulong Revision)? activeGripHold,leftGripHold,rightGripHold;
+ public void Press()=>UpdateGripHold(ref activeGripHold,ActiveHand,true);
+ public void Cancel()=>UpdateGripHold(ref activeGripHold,null,false);
 """
 tests="""
 }
@@ -51,6 +53,19 @@ class Program {
  Check(latch.ToggleActiveGrip()&&!right.IsGrabbing&&left.IsGrabbing);
  latch.ActiveHand=left;Check(latch.ToggleActiveGrip()&&!left.IsGrabbing);
  latch.ActiveHand=failed;Check(!latch.ToggleActiveGrip());latch.ActiveHand=null;Check(!latch.ToggleActiveGrip());
+ var dual=new Rig{LeftHand=left,RightHand=right,ActiveHand=left};
+ dual.SetHandGrip(true,true);dual.SetHandGrip(false,true);
+ Check(left.IsGrabbing&&right.IsGrabbing);
+ dual.Press();dual.ActiveHand=right;dual.Cancel();
+ Check(left.IsGrabbing&&right.IsGrabbing);
+ dual.SetHandGrip(true,false);Check(!left.IsGrabbing&&right.IsGrabbing);
+ right.Release();right.TryGrab();before=right.Releases;
+ dual.Reset();Check(right.IsGrabbing&&right.Releases==before);
+ right.Release();dual.SetHandGrip(false,true);dual.SetHandGrip(true,true);
+ dual.Reset();Check(!right.IsGrabbing&&!left.IsGrabbing);
+ dual.ActiveHand=left;Check(dual.ToggleActiveGrip());
+ dual.SetHandGrip(true,true);dual.SetHandGrip(true,false);Check(left.IsGrabbing);
+ Console.WriteLine("Dedicated desktop grips: both hands held, isolated release, reset, latch and same-prop replacement passed.");
  Console.WriteLine("Latched desktop grip: independent two-hand holding, release and rejected requests passed.");
  Console.WriteLine("Desktop grip subset: hand switching, duplicate/cancel, rejected press and replacement object passed.");
  }
@@ -59,7 +74,14 @@ class Program {
 with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-grip-") as d:
  p=Path(d)
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>')
- (p/"Program.cs").write_text(code+body("private void OnDesktopGrab(")+" public void Cancel() "+body("private void ReleaseDesktopGrip(")+" public bool ToggleActiveGrip() "+body("public bool ToggleActiveGrip()")+" public bool ResetHandTargets() "+body("public bool ResetHandTargets()")+tests)
+ methods = [
+  ("public void SetHandGrip(bool left, bool pressed)", "public void SetHandGrip("),
+  ("private static void UpdateGripHold(ref (AVRSharpHand Hand, ulong Revision)? hold, AVRSharpHand? hand, bool pressed)", "private static void UpdateGripHold("),
+  ("public void Reset()", "private void ReleaseDesktopGrip("),
+  ("public bool ToggleActiveGrip()", "public bool ToggleActiveGrip()"),
+  ("public bool ResetHandTargets()", "public bool ResetHandTargets()"),
+ ]
+ (p/"Program.cs").write_text(code+"\n".join(signature+body(source) for signature, source in methods)+tests)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
 
 # Production held-trigger method; native validity/component access are doubles.
@@ -213,7 +235,8 @@ class Rig {
  public TSubclassOf<AVRSharpHand> LeftHandClass=new(){ClassId=1},RightHandClass=new(){ClassId=2};
  public USceneComponent? LeftTarget=new(),RightTarget=new();
  public UInputAction? DesktopMove=new(),DesktopLook=new(),DesktopHandMove=new(),DesktopGrip=new(),
-  DesktopSwitchHand=new(),DesktopTrigger=new(),DesktopHandRotate,DesktopToggleGrip,DesktopFingers,DesktopLeftTrigger,DesktopRightTrigger;
+  DesktopSwitchHand=new(),DesktopTrigger=new(),DesktopHandRotate,DesktopToggleGrip,DesktopFingers,DesktopLeftTrigger,DesktopRightTrigger,
+  DesktopLeftGrip,DesktopRightGrip;
  public bool desktopHandsPrepared;
  public string GetDesktopSetupIssues()
 '''
@@ -225,6 +248,9 @@ class Program {
  static void Check(bool ok){if(!ok)throw new Exception("desktop setup report regression");}
  static void Main(){
   var rig=new Rig();Check(rig.GetDesktopSetupIssues()=="");
+  rig.DesktopLeftGrip=rig.DesktopRightGrip=new();
+  Check(rig.GetDesktopSetupIssues().Contains("DesktopRightGrip reuses the action assigned to DesktopLeftGrip"));
+  rig.DesktopRightGrip=new();Check(rig.GetDesktopSetupIssues()=="");
   rig.DesktopGrip=rig.DesktopTrigger;rig.LeftHandClass=default;rig.LeftTarget=null;
   var report=rig.GetDesktopSetupIssues();Check(report.Contains("DesktopTrigger reuses")&&report.Contains("Assign LeftHand")&&report.Contains("LeftTarget is missing"));
   rig.desktopHandsPrepared=true;rig.RightHand=new();rig.DesktopMappingContext=new(){Valid=false};

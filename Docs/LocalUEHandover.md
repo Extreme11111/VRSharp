@@ -216,3 +216,12 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 2. 在测试 Widget 中创建 Preview 和 Stop 按钮，分别连接 Pawn 的两个方法。Preview 参数用关卡道具的抓点引用。也可由调试按键调用。按现有桌面扳机，或通过滑条调用 `SetTrigger` 调整预览按压。无需接触道具。
 3. 验证预览期间灯保持关闭、GrabCount 为 0。切换手、Stop 或 ResetDesktopInput 会结束预览并按配置淡出。真正抓取成功会接管视觉姿势。握住道具时再次点 Preview 应返回 false，当前持物动画继续。验收左右手限制及预览期间销毁抓点后的还原。
 4. 本地先做 UE5.7/UnrealSharp0.1 Glue 编译，再做普通桌面 PIE。独立数学和托管回归覆盖预览隔离、触发路由、淡出与真实抓握接管。完整 UE 编译、蓝图、PIE 和头显待验。
+
+## PR #8 桌面左右手独立抓放（2026-11-07）
+
+`Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs` 提供可选的 `DesktopLeftGrip` 和 `DesktopRightGrip`，以及 Widget 或脚本可调用的 `SetHandGrip(left, pressed)`。当前手选择继续用于移动和转动手部目标。共享抓取键和锁存抓取保留原有用法。
+
+1. 用 UE5.7 和 UnrealSharp0.1 生成 Glue 并编译。在现有桌面 Pawn 蓝图的 `IMC_VRSharpDesktop` 中创建独立的 Bool 动作 `IA_DesktopLeftGrip`、`IA_DesktopRightGrip`，例如分别绑定 J 和 K，确保键位不与现有动作冲突。分别赋给 Pawn 同侧的 Grip 属性，保留原有必填动作。C# 在 Started 抓取，在 Completed 和 Canceled 释放。若使用 Widget，按下与松开分别调用 `SetHandGrip`，传入对应侧和 true/false。失焦时沿用 `ResetDesktopInput`。
+2. 在无头显的桌面 PIE，把左右手分别移到允许该侧抓取的道具旁。按住两个键，再按 Tab 切手并移动目标。两边都应持续持物。松开一个键只释放它成功抓住的物体。可用两个键抓住手电筒的不同专用抓点，再操作左右扳机测试联锁。
+3. 按住一侧的抓取键，通过调试蓝图先释放该手，再用程序入口让该手重新抓同一道具。松开原键后，新抓握应保留。分别测试空抓、已经锁存的手、动作取消与 `ResetDesktopInput`。预期只释放对应输入动作取得且仍有效的抓握，未抓成功的动作不会触发释放。
+4. 托管替身回归覆盖独立抓放、共享键切手、取消、重置和同物体重新抓取。完整 UE 编译、Enhanced Input 分发、PIE 双手物理与动画以及头显回归待验。

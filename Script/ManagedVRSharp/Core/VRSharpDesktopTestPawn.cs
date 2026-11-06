@@ -98,6 +98,7 @@ public partial class AVRSharpDesktopTestPawn : APawn
 
     public override void EndPlay(EEndPlayReason endPlayReason)
     {
+        if (mappingSubsystem is null) ResetDesktopInput();
         ClearDesktopMapping();
         DestroySpawnedHand(spawnedLeftHand);
         DestroySpawnedHand(spawnedRightHand);
@@ -106,8 +107,7 @@ public partial class AVRSharpDesktopTestPawn : APawn
     }
 
     private UEnhancedInputComponent? boundDesktopInput;
-    private AVRSharpHand? gripInputHand;
-    private UVRSharpGrabbable? gripInputObject;
+    private (AVRSharpHand Hand, ulong Revision)? activeGripHold, leftGripHold, rightGripHold;
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial UInputAction? DesktopMove { get; set; }
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
@@ -116,6 +116,10 @@ public partial class AVRSharpDesktopTestPawn : APawn
     public partial UInputAction? DesktopHandMove { get; set; }
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial UInputAction? DesktopGrip { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? DesktopLeftGrip { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? DesktopRightGrip { get; set; }
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial UInputAction? DesktopSwitchHand { get; set; }
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
@@ -147,6 +151,8 @@ public partial class AVRSharpDesktopTestPawn : APawn
         CheckDesktopAction(issues, usedActions, nameof(DesktopLook), DesktopLook, true);
         CheckDesktopAction(issues, usedActions, nameof(DesktopHandMove), DesktopHandMove, true);
         CheckDesktopAction(issues, usedActions, nameof(DesktopGrip), DesktopGrip, true);
+        CheckDesktopAction(issues, usedActions, nameof(DesktopLeftGrip), DesktopLeftGrip, false);
+        CheckDesktopAction(issues, usedActions, nameof(DesktopRightGrip), DesktopRightGrip, false);
         CheckDesktopAction(issues, usedActions, nameof(DesktopSwitchHand), DesktopSwitchHand, true);
         CheckDesktopAction(issues, usedActions, nameof(DesktopTrigger), DesktopTrigger, true);
         CheckDesktopAction(issues, usedActions, nameof(DesktopLeftTrigger), DesktopLeftTrigger, false);
@@ -215,6 +221,18 @@ public partial class AVRSharpDesktopTestPawn : APawn
         input.BindAction(DesktopGrip, ETriggerEvent.Started, OnDesktopGrab, out _);
         input.BindAction(DesktopGrip, ETriggerEvent.Completed, OnDesktopRelease, out _);
         input.BindAction(DesktopGrip, ETriggerEvent.Canceled, OnDesktopRelease, out _);
+        if (DesktopLeftGrip is { } leftGrip)
+        {
+            input.BindAction(leftGrip, ETriggerEvent.Started, OnDesktopLeftGrab, out _);
+            input.BindAction(leftGrip, ETriggerEvent.Completed, OnDesktopLeftRelease, out _);
+            input.BindAction(leftGrip, ETriggerEvent.Canceled, OnDesktopLeftRelease, out _);
+        }
+        if (DesktopRightGrip is { } rightGrip)
+        {
+            input.BindAction(rightGrip, ETriggerEvent.Started, OnDesktopRightGrab, out _);
+            input.BindAction(rightGrip, ETriggerEvent.Completed, OnDesktopRightRelease, out _);
+            input.BindAction(rightGrip, ETriggerEvent.Canceled, OnDesktopRightRelease, out _);
+        }
         input.BindAction(DesktopSwitchHand, ETriggerEvent.Started, OnDesktopSwitch, out _);
         if (DesktopHandRotate is not null)
         {
@@ -268,18 +286,22 @@ public partial class AVRSharpDesktopTestPawn : APawn
         => SetHandTrigger(false, 0);
     [UFunction]
     private void OnDesktopGrab(FInputActionValue value, float elapsed, float triggered, UInputAction action)
-    {
-        if (gripInputHand is not null) return;
-        var hand = ActiveHand;
-        if (hand is not null && SystemLibrary.IsValid(hand) && hand.TryGrab())
-        {
-            gripInputHand = hand;
-            gripInputObject = hand.GrabbedObject;
-        }
-    }
+        => UpdateGripHold(ref activeGripHold, ActiveHand, true);
     [UFunction]
     private void OnDesktopRelease(FInputActionValue value, float elapsed, float triggered, UInputAction action)
-    { ReleaseDesktopGrip(); }
+        => UpdateGripHold(ref activeGripHold, null, false);
+    [UFunction]
+    private void OnDesktopLeftGrab(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+        => SetHandGrip(true, true);
+    [UFunction]
+    private void OnDesktopLeftRelease(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+        => SetHandGrip(true, false);
+    [UFunction]
+    private void OnDesktopRightGrab(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+        => SetHandGrip(false, true);
+    [UFunction]
+    private void OnDesktopRightRelease(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+        => SetHandGrip(false, false);
     [UFunction]
     private void OnDesktopSwitch(FInputActionValue value, float elapsed, float triggered, UInputAction action)
     { SelectLeftHand(!ControlLeftHand); }
@@ -301,17 +323,36 @@ public partial class AVRSharpDesktopTestPawn : APawn
         return !hand.IsGrabbing;
     }
 
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public void SetHandGrip(bool left, bool pressed)
+    {
+        if (left) UpdateGripHold(ref leftGripHold, LeftHand, pressed);
+        else UpdateGripHold(ref rightGripHold, RightHand, pressed);
+    }
+
+    private static void UpdateGripHold(ref (AVRSharpHand Hand, ulong Revision)? hold, AVRSharpHand? hand, bool pressed)
+    {
+        if (pressed)
+        {
+            if (hold.HasValue || hand is null || !SystemLibrary.IsValid(hand) || hand.IsGrabbing) return;
+            ulong expectedRevision = unchecked(hand.GrabRevision + 1);
+            if (hand.TryGrab() && SystemLibrary.IsValid(hand) && hand.IsGrabbing && hand.GrabRevision == expectedRevision)
+                hold = (hand, expectedRevision);
+            return;
+        }
+
+        var previous = hold;
+        hold = null;
+        if (previous is { } owned && SystemLibrary.IsValid(owned.Hand) &&
+            owned.Hand.IsGrabbing && owned.Hand.GrabRevision == owned.Revision)
+            owned.Hand.Release();
+    }
+
     private void ReleaseDesktopGrip()
     {
-        var hand = gripInputHand;
-        var item = gripInputObject;
-        gripInputHand = null;
-        gripInputObject = null;
-        if (hand is not null && SystemLibrary.IsValid(hand) && item is not null &&
-            hand.IsGrabbing && hand.GrabbedObject == item)
-        {
-            hand.Release();
-        }
+        UpdateGripHold(ref activeGripHold, null, false);
+        SetHandGrip(true, false);
+        SetHandGrip(false, false);
     }
 
     [UFunction]
