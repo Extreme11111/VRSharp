@@ -96,6 +96,7 @@ public partial class AVRSharpHand : AActor
     private UVRSharpHandPose? animationPose;
     private float poseBlendWeight;
     private bool poseExiting;
+    private float exitPoseTrigger;
 
     // Visual pose survives logical release until its configured fade has completed.
     [UFunction(FunctionFlags.BlueprintCallable)]
@@ -106,10 +107,18 @@ public partial class AVRSharpHand : AActor
     [UFunction(FunctionFlags.BlueprintCallable)]
     public bool IsGrabPoseExiting() => GetAnimationGrabPose() is not null && poseExiting;
 
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public float GetGrabAnimationTrigger()
+    {
+        if (GetAnimationGrabPose() is null) return 0;
+        return poseExiting ? exitPoseTrigger : activePoseTrigger;
+    }
+
     private void BeginPoseAnimation(UVRSharpHandPose? pose)
     {
         animationPose = pose;
         poseExiting = false;
+        exitPoseTrigger = 0;
         poseBlendWeight = pose is not null && float.IsFinite(pose.EnterBlendSeconds) && pose.EnterBlendSeconds > 0 ? 0 : 1;
         if (pose is null) poseBlendWeight = 0;
     }
@@ -816,6 +825,7 @@ public partial class AVRSharpHand : AActor
         // 缓存：回调里可能会清空/销毁
         var grabbable = GrabbedObject;
 
+        float releasedTrigger = activePoseTrigger;
         SetGrabTrigger(0);
         OnBeforeRelease?.Invoke(grabbable);
         if (grabbable is not null && SystemLibrary.IsValid(grabbable))
@@ -836,6 +846,7 @@ public partial class AVRSharpHand : AActor
         activeGrabPose = null;
         var visualPose = GetAnimationGrabPose();
         poseExiting = visualPose is not null && float.IsFinite(visualPose.ExitBlendSeconds) && visualPose.ExitBlendSeconds > 0;
+        exitPoseTrigger = poseExiting ? releasedTrigger : 0;
         if (!poseExiting)
         {
             animationPose = null;

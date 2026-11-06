@@ -21,7 +21,7 @@ code='''using System;
 class UVRSharpHandPose {public float EnterBlendSeconds,ExitBlendSeconds;}
 static class SystemLibrary {public static bool IsValid(object x)=>x!=null;}
 class Rig {
-private UVRSharpHandPose? animationPose; private float poseBlendWeight; private bool poseExiting;
+private UVRSharpHandPose? animationPose; private float poseBlendWeight, exitPoseTrigger; private bool poseExiting;
 public UVRSharpHandPose? GetAnimationGrabPose()=>animationPose;
 public float Weight=>poseBlendWeight;public bool Present=>animationPose!=null;
 public void Exit(){poseExiting=true;}

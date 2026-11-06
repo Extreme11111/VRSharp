@@ -296,7 +296,6 @@ public partial class AVRSharpDesktopTestPawn : APawn
         var hand = ActiveHand;
         if (hand is null || !SystemLibrary.IsValid(hand)) return false;
         if (!hand.IsGrabbing) return hand.TryGrab();
-        hand.SetGrabTrigger(0);
         hand.Release();
         trigger = 0;
         return !hand.IsGrabbing;
@@ -311,7 +310,6 @@ public partial class AVRSharpDesktopTestPawn : APawn
         if (hand is not null && SystemLibrary.IsValid(hand) && item is not null &&
             hand.IsGrabbing && hand.GrabbedObject == item)
         {
-            hand.SetGrabTrigger(0);
             hand.Release();
         }
     }

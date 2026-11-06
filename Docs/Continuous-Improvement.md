@@ -132,3 +132,5 @@ Combined math, pose/trigger, desktop grip, event state and 192 admission policy 
 - 2026-11-06 PR #8 显式专用抓点改为对齐 Palm 的位置和旋转，处理 Palm 不在手 Actor 原点或有局部旋转的资产。名称表抓点保留原解释。两个独立数学检查包含 Palm 对齐回归，UE 编译、PIE 和头显待验。配置与既有显式抓点迁移见 LocalUEHandover。
 
 - 2026-11-06 PR #8 为双手道具新增可选扳机联锁。两个实际持有手都按下才会发布激活，任一松开或释放即解除。复用桌面独立扳机和 OpenXR 路径，默认仍允许单手激活。手电筒配置和验收见 LocalUEHandover，UE 编译、PIE 和头显待验。
+
+- 2026-11-06 PR #8 特殊抓点增加抓握与按压序列槽，共享 AnimBP 可以按当前抓点切换资源。释放淡出保留视觉采样，业务扳机立即归零。接线及左右手切换验收见 LocalUEHandover，未制作 UE 资产。独立数学和托管回归与完整 UE 验收分别记录。

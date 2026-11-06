@@ -21,7 +21,13 @@ public partial class UVRSharpHandPose : USceneComponent
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial float ExitBlendSeconds { get; set; }
 
-    // Optional animation graph state key; empty retains existing finger animation.
+    // Optional clips for a shared AnimBP. A missing pressed clip reuses the grip clip.
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UAnimSequence? GripAnimation { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UAnimSequence? PressedAnimation { get; set; }
+
+    // Optional state key for existing animation graphs.
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial string? AnimationKey { get; set; }
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]

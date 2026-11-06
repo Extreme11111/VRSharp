@@ -149,14 +149,14 @@ class UVRSharpGrabbable : Native {
 class AVRSharpHand {
  public bool IsGrabbing=true,poseExiting;
  public bool useAuthoredFingerWeights=true,useTriggerBlend=true;
- public float activePoseTrigger=.8f,poseBlendWeight=1,Weights=1;
+ public float activePoseTrigger=.8f,exitPoseTrigger,poseBlendWeight=1,Weights=1;
  public UVRSharpGrabbable? GrabbedObject=new();
  public UVRSharpHandPose? activeGrabPose,animationPose;
  public Body? HandRigidbody=new();
  public int NativeDetaches;
  public event Action<UVRSharpGrabbable?>? OnBeforeRelease,OnAfterRelease;
  public event Action<AVRSharpHand,UVRSharpHandPose>? GrabPoseExited;
- public void SetGrabTrigger(float value){}
+ public void SetGrabTrigger(float value){activePoseTrigger=value;}
  public void SetAllAnimationWeights(float value){Weights=value;}
  public UVRSharpHandPose? GetAnimationGrabPose()=>animationPose is {Valid:true}?animationPose:null;
  public void DetachFromActor(EDetachmentRule a,EDetachmentRule b,EDetachmentRule c){NativeDetaches++;}
@@ -179,7 +179,8 @@ class Program {
    Check(hand.activePoseTrigger==0&&hand.Weights==0&&!hand.useAuthoredFingerWeights&&!hand.useTriggerBlend&&hand.HandRigidbody!.SimulatePhysics);
   }
   var normal=new AVRSharpHand();var valid=normal.GrabbedObject!;normal.animationPose=normal.activeGrabPose=new();
-  normal.Release();Check(valid.Detaches==1&&valid.After==1&&normal.NativeDetaches==0&&normal.poseExiting);
+  normal.Release();Check(valid.Detaches==1&&valid.After==1&&normal.NativeDetaches==0&&normal.poseExiting&&normal.activePoseTrigger==0&&normal.GetGrabAnimationTrigger()==.8f);
+  normal.animationPose=null;Check(normal.GetGrabAnimationTrigger()==0);
   var missing=new AVRSharpHand{GrabbedObject=null,HandRigidbody=null};missing.Release();Check(!missing.IsGrabbing&&missing.NativeDetaches==1);
   Console.WriteLine("Hand release recovery: stale/null target, both callback destruction paths and valid pose exit passed.");
  }
@@ -188,5 +189,5 @@ class Program {
 with tempfile.TemporaryDirectory(prefix="vrsharp-hand-release-") as d:
  p=Path(d)
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project>')
- (p/"Program.cs").write_text(release_code+method("public void Release()")+release_tests)
+ (p/"Program.cs").write_text(release_code+method("public void Release()")+method("public float GetGrabAnimationTrigger()")+release_tests)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)

@@ -198,3 +198,13 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 `Script/ManagedVRSharp/Core/VRSharpGrabbable.cs` 新增 `RequireTwoTriggerHands`，在道具蓝图的 Grab 组件 Details 中开启。用于验收的 `/VRSharp/Tests/BP_VRSharpFlashlight` 沿用现有 Body、Lamp、左右手抓点及动画配置。保持 SingleHandOnly 关闭，并为两手提供兼容抓点。使用已配置的按下和松开阈值，例如 0.75 和 0.55。联锁按同一 Grabbable 上两个不同的持有手 Actor 计数。在编辑器配置该选项，默认关闭时仍由任一只手点亮。模拟扳机值和抓握动画照常更新。
 
 先用 UE5.7/UnrealSharp0.1 生成 Glue 并编译。无头显 PIE 中用桌面锁存抓握让两手都抓住手电筒，再用 DesktopLeftTrigger、DesktopRightTrigger 或两条滑杆测试。只按一侧时灯保持关闭，两侧都越过按下阈值才亮，松开一侧到释放阈值或直接放下任一只手时立即熄灭。重新抓取时不能继承上一次的激活。检查 `GetIsTriggerActive` 与现有 `TriggerActivationChanged` 通知一致，并用 OpenXR 重跑。托管回归覆盖默认行为、联锁、释放和重新抓取，UE 编译、PIE 和头显待验。
+
+## PR #8 可复用的抓握动画资源槽（2026-11-06）
+`Script/ManagedVRSharp/Core/VRSharpHandPose.cs` 新增 `GripAnimation` 和 `PressedAnimation`，可分别给同一物体的 LeftGrip 和 RightGrip 选择匹配各自手骨架的 Animation Sequence。未填写 GripAnimation 时继续走现有 AnimationKey 或动态手指动画。未填写 PressedAnimation 时复用 GripAnimation。资源槽供动画图使用，现有蓝图不会自动切换到新图。
+
+1. 用 UE5.7 和 UnrealSharp0.1 生成 Glue 并编译。在 `/VRSharp/Tests/BP_VRSharpFlashlight` 的左右手抓点分别填握住和按下的序列。测试可先使用两段第 0 帧即为目标姿势的序列，配置 EnterBlendSeconds=0.15、ExitBlendSeconds=0.2。
+2. 在手 AnimBP 的 Event Blueprint Update Animation 调用 `GetAnimationGrabPose`，检查有效性后读取两个资源引用。把 Grip、Pressed 和是否有 Grip 缓存到动画变量。Pressed 为空时使用 Grip。读取 `GetGrabAnimationTrigger` 与 `GetGrabPoseBlendWeight` 到 float 变量。退出完成或 Pose 无效时清空资源槽并将外层 Alpha 置零。
+3. AnimGraph 中设置两路 Sequence Evaluator，暴露 Sequence 资产输入，显式时间设为 0，分别输入 Grip 和 Pressed。用 Blend 的 Alpha 接 `GetGrabAnimationTrigger` 的缓存值。在第二层 Blend 中 A 接已有手动画，B 接前一层输出，Alpha 接抓握淡入淡出权重。无有效 Grip 时使用原有图，避免求值空序列。动态序列资源引脚和骨架兼容性在宿主版本验收。
+4. 桌面模式按到半扳机后放下，工具扳机值和开关应立即归零，但视觉淡出应从松手前的按压姿势开始。淡出完成后重新抓取或换成普通物体，不能带入上一次按压值。用左右手及 OpenXR 重跑，检查动画资源不同也能使用同一 AnimBP 逻辑。
+
+`Script/ManagedVRSharp/Core/VRSharpHand.cs` 只在动画淡出保留视觉采样，原 `GetGrabPoseTrigger` 仍返回实时业务输入。桌面放下入口交给手的 Release 统一归零，避免提前丢失淡出采样。本轮未制作序列和 AnimBP 资产。托管回归覆盖释放时视觉采样保留与逻辑清零。完整 UE 编译、动画图、PIE 和头显待验。
