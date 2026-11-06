@@ -129,11 +129,22 @@ public partial class UVRSharpGrabbable : UActorComponent
     private readonly List<AVRSharpHand> hands = new();
     private readonly Dictionary<AVRSharpHand, UPrimitiveComponent> components = new();
 
-    public UPrimitiveComponent? GrabbedComponent { get; private set; }
+    public AVRSharpHand? PrimaryGrabbingHand => hands.Count == 0 ? null : hands[0];
+    public UPrimitiveComponent? GrabbedComponent => PrimaryGrabbingHand is { } hand ? GetHeldComponent(hand) : null;
     public int GrabCount => hands.Count;
     public bool IsGrabbed => hands.Count != 0;
     public event Action<AVRSharpHand, UVRSharpGrabbable, UPrimitiveComponent>? Grabbed;
     public event Action<AVRSharpHand, UVRSharpGrabbable, UPrimitiveComponent>? Released;
+
+    // Published after Grabbed/Released. Nested operations publish the final pair
+    // without sending an older notification when the outer callback resumes.
+    private (AVRSharpHand? Hand, UPrimitiveComponent? Component) publishedPrimaryGrab;
+    public event Action<UVRSharpGrabbable, AVRSharpHand?, UPrimitiveComponent?, AVRSharpHand?, UPrimitiveComponent?>? PrimaryGrabChanged;
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public AVRSharpHand? GetPrimaryGrabbingHand() => PrimaryGrabbingHand;
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public UPrimitiveComponent? GetPrimaryGrabComponent() => GrabbedComponent;
 
     [UFunction(FunctionFlags.BlueprintCallable)]
     public bool GetIsGrabbed() => IsGrabbed;
@@ -251,7 +262,6 @@ public partial class UVRSharpGrabbable : UActorComponent
         if (hand.IsGrabbing && hand.GrabbedObject != this) return;
         if (pose is not null && !CanUseGrabPose(pose)) return;
         if (!hand.AttachToComponent(component, "", EAttachmentRule.KeepWorld, EAttachmentRule.KeepWorld, EAttachmentRule.KeepWorld, true)) return;
-        GrabbedComponent ??= component;
         components[hand] = component;
         if (pose is not null) heldPoses[hand] = pose;
         else heldPoses.Remove(hand);
@@ -262,6 +272,7 @@ public partial class UVRSharpGrabbable : UActorComponent
         hand.GrabbedObject = this;
         hand.NotifyGrabbed(this, component);
         Grabbed?.Invoke(hand, this, component);
+        PublishPrimaryGrabChange();
     }
 
     /// <summary>
@@ -302,7 +313,6 @@ public partial class UVRSharpGrabbable : UActorComponent
 
         if (hands.Count == 0)
         {
-            GrabbedComponent = null;
             if (DropWithoutMomentum && SystemLibrary.IsValid(releasedComponent) && releasedComponent.IsSimulatingPhysics())
             {
                 releasedComponent.SetPhysicsLinearVelocity(default);
@@ -312,6 +322,16 @@ public partial class UVRSharpGrabbable : UActorComponent
         SetTriggerHandActive(hand, releasedComponent, false);
         hand.NotifyReleased(this, releasedComponent);
         Released?.Invoke(hand, this, releasedComponent);
+        PublishPrimaryGrabChange();
+    }
+
+    private void PublishPrimaryGrabChange()
+    {
+        var previous = publishedPrimaryGrab;
+        var current = (Hand: PrimaryGrabbingHand, Component: GrabbedComponent);
+        if (previous == current) return;
+        publishedPrimaryGrab = current;
+        PrimaryGrabChanged?.Invoke(this, previous.Hand, previous.Component, current.Hand, current.Component);
     }
 
 }

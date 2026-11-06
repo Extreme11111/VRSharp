@@ -225,3 +225,12 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 2. 在无头显的桌面 PIE，把左右手分别移到允许该侧抓取的道具旁。按住两个键，再按 Tab 切手并移动目标。两边都应持续持物。松开一个键只释放它成功抓住的物体。可用两个键抓住手电筒的不同专用抓点，再操作左右扳机测试联锁。
 3. 按住一侧的抓取键，通过调试蓝图先释放该手，再用程序入口让该手重新抓同一道具。松开原键后，新抓握应保留。分别测试空抓、已经锁存的手、动作取消与 `ResetDesktopInput`。预期只释放对应输入动作取得且仍有效的抓握，未抓成功的动作不会触发释放。
 4. 托管替身回归覆盖独立抓放、共享键切手、取消、重置和同物体重新抓取。完整 UE 编译、Enhanced Input 分发、PIE 双手物理与动画以及头显回归待验。
+
+## PR #8 双手道具主手交接（2026-11-07）
+
+`Script/ManagedVRSharp/Core/VRSharpGrabbable.cs` 公开 `PrimaryGrabbingHand` 和当前主手的 `GrabbedComponent`，蓝图可通过 `GetPrimaryGrabbingHand` 和 `GetPrimaryGrabComponent` 查询。主手取当前抓握记录中最早的一只手。主手松开后，下一只仍持有的手接任。已有代码若需要记住首次抓住的组件，可在首次 Grabbed 时自行保存，`GrabbedComponent` 现在随主手交接。
+
+- C# 可订阅 `PrimaryGrabChanged(grabbable, oldHand, oldComponent, newHand, newComponent)`，在 EndPlay 退订。首次抓住时旧手与旧组件为空，最后放下时新手与新组件为空。常规顺序是状态写入、已有 Grabbed/Released 通知、主手通知。失败、重复抓取和不改变主手的副手抓放不会发送主手通知。若已有通知内同步发生再次抓放，主手通知发布最终观察到的变化。
+- 在 UE5.7/UnrealSharp0.1 生成 Glue 并编译。在桌面测试地图复制双手工具，保留一个 Grabbable，关闭 SingleHandOnly，将左、右 HandPose 的 TargetComponent 分别指向两个可抓的 Primitive，并设置各自手别。选用桌面左右 Grip 键或 OpenXR 双手抓放。可在调试 Widget 显示两个查询节点的结果，用 C# 订阅事件输出前后手与组件名称。
+- 左手先抓、右手再抓。查询应显示左手和它的组件，右手加入时无主手通知。先松左手应显示右手及其组件，右手继续持物。再松右手时两项查询为空。交换抓取顺序复测，再先松副手，确认主手保持。分别检查特殊姿势、扳机和释放期间的物理焊接。
+- 两个独立数学检查和托管交接回归在云端运行。完整 UE 编译、蓝图 Glue、PIE 中的物理焊接与头显实测待本地验收。

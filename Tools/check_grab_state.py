@@ -8,7 +8,12 @@ def method(sig):
  while depth:
   depth+=(s[end]=="{")-(s[end]=="}");end+=1
  return s[start:end]
-members="\n".join(l for l in s.splitlines() if any(x in l for x in ["public UPrimitiveComponent? GrabbedComponent {","public int GrabCount =>","public bool IsGrabbed =>","public bool IsTriggerActive =>","public event Action<AVRSharpHand","public bool IsHeldBy(","public AVRSharpHand[] GetGrabbingHands()"]))
+members="\n".join(l for l in s.splitlines() if any(x in l for x in [
+ "public UPrimitiveComponent? GrabbedComponent =>", "public AVRSharpHand? PrimaryGrabbingHand =>",
+ "Component) publishedPrimaryGrab;", "? PrimaryGrabChanged;", "public int GrabCount =>", "public bool IsGrabbed =>",
+ "public bool IsTriggerActive =>", "public event Action<AVRSharpHand", "public bool IsHeldBy(",
+ "public AVRSharpHand[] GetGrabbingHands()",
+]))
 code="""using System; using System.Linq; using System.Collections.Generic;
 enum EAttachmentRule {KeepWorld} enum EDetachmentRule {KeepWorld}
 class UPrimitiveComponent {
@@ -116,6 +121,33 @@ class Program {
  shared.AttachWithPose(a,grip,sharedPose);shared.AttachWithPose(b,grip,sharedPose);
  Check(shared.GrabCount==2);shared.Detach(a);Check(shared.IsGrabPoseOccupied(sharedPose));shared.Detach(b);
  Check(!shared.IsGrabPoseOccupied(sharedPose));
+ var primary=new UVRSharpGrabbable();
+ var changes=new List<(AVRSharpHand?,UPrimitiveComponent?,AVRSharpHand?,UPrimitiveComponent?)>();
+ var order=new List<string>();
+ primary.PrimaryGrabChanged+=(o,oldHand,oldPart,newHand,newPart)=>{
+  Check(o==primary&&o.PrimaryGrabbingHand==newHand&&o.GrabbedComponent==newPart);
+  changes.Add((oldHand,oldPart,newHand,newPart));order.Add("primary");
+ };
+ primary.Grabbed+=(h,o,p)=>order.Add("grabbed");
+ primary.Released+=(h,o,p)=>order.Add("released");
+ a.Success=false;primary.Attach(a,grip);Check(changes.Count==0);a.Success=true;
+ primary.Attach(a,grip);primary.Attach(a,grip);
+ primary.Attach(b,secondGrip);primary.Detach(b);
+ Check(primary.PrimaryGrabbingHand==a&&primary.GrabbedComponent==grip&&changes.Count==1);
+ primary.Attach(b,secondGrip);primary.Detach(a);primary.Detach(b);
+ Check(changes.SequenceEqual(new (AVRSharpHand?,UPrimitiveComponent?,AVRSharpHand?,UPrimitiveComponent?)[]{
+  (null,null,a,grip),(a,grip,b,secondGrip),(b,secondGrip,null,null)
+ }));
+ Check(order.SequenceEqual(new[]{"grabbed","primary","grabbed","released","grabbed","released","primary","released","primary"}));
+ primary.Attach(a,grip);primary.Attach(a,secondGrip);
+ Check(changes[^1]==(a,grip,a,secondGrip));primary.Detach(a);
+ var nested=new UVRSharpGrabbable();
+ int nestedChanges=0;
+ nested.Grabbed+=(h,o,p)=>o.Detach(h);
+ nested.PrimaryGrabChanged+=(o,oldHand,oldPart,newHand,newPart)=>nestedChanges++;
+ nested.Attach(a,grip);
+ Check(nestedChanges==0&&nested.PrimaryGrabbingHand==null);
+ Console.WriteLine("Primary grab: two-hand transfer, secondary release, retarget, callback order and nested release passed.");
  Console.WriteLine("Pose occupancy: failed weld, exclusivity, different handles, reuse and shared compatibility passed.");
  Console.WriteLine("Tool trigger activation: hysteresis, per-hand aggregation, context rejection, release and regrab passed.");
  Console.WriteLine("Production grab subset: contextual events, state, failed/duplicate attachment and dual-hand release, and opt-in momentum reset passed.");
@@ -126,7 +158,8 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-grab-check-") as d:
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>')
  (p/"Program.cs").write_text(code+members+method("public bool IsGrabPoseOccupied(")
     +" internal bool CanUseGrabPose(UVRSharpHandPose pose) => SystemLibrary.IsValid(pose) && (!pose.ExclusiveToOneHand || !IsGrabPoseOccupied(pose));"
-    +method("internal void AttachWithPose(")+method("public void Detach(")+method("internal void NotifyGrabTrigger(")+method("private void SetTriggerHandActive(")+tests)
+    +method("internal void AttachWithPose(")+method("public void Detach(")+method("internal void NotifyGrabTrigger(")
+    +method("private void SetTriggerHandActive(")+method("private void PublishPrimaryGrabChange(")+tests)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
 
 # The real hand release method must recover even when a callback destroys its target.
