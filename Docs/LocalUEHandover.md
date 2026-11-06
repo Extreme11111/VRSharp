@@ -181,3 +181,10 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 3. 将道具放在桌面测试地图及 VR 测试地图的可达位置。普通 PIE 启动后灯应关闭。抓取、按下扳机后应点亮，松扳机或放下后应关闭。允许两手持物时用桌面独立扳机同时按压，两手依次松开，灯应只在最后一只激活手松开时关闭。用 OpenXR 重跑。验证左右手对齐、姿势切换及退出恢复。销毁道具时不应残留亮灯或事件订阅。
 
 本轮只交付 C# 示例类，蓝图、网格配置、动作映射、AnimBP 和关卡放置按上述步骤本地完成。托管测试用原生替身编译示例类，完整 UE 编译、PIE、渲染和头显待验。
+
+## PR #8 独占抓点与双手把手（2026-11-06）
+`Script/ManagedVRSharp/Core/VRSharpHandPose.cs` 新增 `ExclusiveToOneHand`。在一件允许双手抓取的工具蓝图上配置两个 HandPose，两点可以绑定同一个 Body Primitive。给两点不同的位置和 AnimationKey，勾选独占，并保留需要测试的手别。开启 Grabbable 的 RequireExplicitGrabPose 以便全部兼容抓点被占用时拒绝抓取。默认关闭独占，可继续共享旧抓点。关闭 RequireExplicitGrabPose 时，没有可用姿势仍可走普通抓法。
+
+普通抓取跳过被占用的独占点，TryGrabAtPose 请求被占用的点时返回 false。Grabbable 在焊接成功后、Grabbed 通知前登记，释放时在 Released 通知前清除。调试 Widget 可调用 `Grab.IsGrabPoseOccupied(Pose)` 显示占用状态。退出动画尚未淡出时，抓点已可重新使用。
+
+本地 UE5.7/UnrealSharp0.1 生成 Glue 后编译。桌面 PIE 先让左手抓最高优先级点，切到右手并普通抓取，预期改用另一个点。用按钮指定左手已占点应失败。放开左手后检查占用归零，并让空手重新取得该点，右手仍持有自己的点。再用 OpenXR 测试实际碰撞、Chaos 双手焊接和专用 AnimBP。托管测试覆盖候选、注册和释放，完整 UE 编译、PIE 和头显待验。

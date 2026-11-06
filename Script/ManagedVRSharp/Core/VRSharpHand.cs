@@ -683,7 +683,7 @@ public partial class AVRSharpHand : AActor
         if (candidates is null) return null;
         foreach (var candidate in candidates.OfType<UVRSharpHandPose>())
         {
-            if (!SystemLibrary.IsValid(candidate) || candidate.TargetComponent != component ||
+            if (!grabbable.CanUseGrabPose(candidate) || candidate.TargetComponent != component ||
                 (IsLeft ? candidate.DisableLeftHand : candidate.DisableRightHand)) continue;
             var distance = FVector.DistanceSquared(palmLocation, candidate.WorldLocation);
             if (!double.IsFinite(distance)) continue;
@@ -713,7 +713,7 @@ public partial class AVRSharpHand : AActor
 
     private bool IsRequestedPoseValid(UVRSharpGrabbable grabbable, UPrimitiveComponent component, UVRSharpHandPose pose)
     {
-        if (!SystemLibrary.IsValid(pose) || !SystemLibrary.IsValid(component) ||
+        if (!grabbable.CanUseGrabPose(pose) || !SystemLibrary.IsValid(component) ||
             grabbable.Owner is null || pose.Owner != grabbable.Owner || component.Owner != grabbable.Owner ||
             pose.TargetComponent != component || (IsLeft ? pose.DisableLeftHand : pose.DisableRightHand) || Palm is null)
             return false;
@@ -749,7 +749,7 @@ public partial class AVRSharpHand : AActor
                 var poseComponents = allComponents?.OfType<UVRSharpHandPose>().ToList();
 
                 // 使用 Contains 匹配 HandPose 组件名称
-                handPose = poseComponents?.FirstOrDefault(p => SystemLibrary.IsValid(p) && !(IsLeft ? p.DisableLeftHand : p.DisableRightHand) && SystemLibrary.GetObjectName(p).Contains(poseName));
+                handPose = poseComponents?.FirstOrDefault(p => grabbable.CanUseGrabPose(p) && !(IsLeft ? p.DisableLeftHand : p.DisableRightHand) && SystemLibrary.GetObjectName(p).Contains(poseName));
             }
         }
 
@@ -780,7 +780,7 @@ public partial class AVRSharpHand : AActor
             targetGraspWeight = VRSharpMathHelper.NormalizePoseWeight(handPose.GraspWeight);
         }
         else SetAllAnimationWeights(1f);
-        grabbable.Attach(this, component);
+        grabbable.AttachWithPose(this, component, handPose);
         if (!IsGrabbing || GrabbedObject != grabbable) return false;
         if (IsGrabbing && GrabbedObject == grabbable)
         {

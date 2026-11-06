@@ -6,6 +6,9 @@ namespace VRSharp.Core;
 [UClass]
 public partial class UVRSharpHandPose : USceneComponent
 {
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial bool ExclusiveToOneHand { get; set; }
+
     // Explicit collider association takes precedence over legacy name mappings.
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial UPrimitiveComponent? TargetComponent { get; set; }

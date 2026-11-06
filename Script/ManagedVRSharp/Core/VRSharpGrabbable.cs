@@ -220,15 +220,37 @@ public partial class UVRSharpGrabbable : UActorComponent
     /// 将 Hand 焊接到物体上，记录抓握顺序
     /// </summary>
     public void Attach(AVRSharpHand hand, UPrimitiveComponent component)
+        => AttachWithPose(hand, component, null);
+
+    private readonly Dictionary<AVRSharpHand, UVRSharpHandPose> heldPoses = new();
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool IsGrabPoseOccupied(UVRSharpHandPose pose)
+    {
+        if (pose is null || !SystemLibrary.IsValid(pose)) return false;
+        foreach (var entry in heldPoses)
+        {
+            if (entry.Value == pose && SystemLibrary.IsValid(entry.Key)) return true;
+        }
+        return false;
+    }
+
+    internal bool CanUseGrabPose(UVRSharpHandPose pose)
+        => SystemLibrary.IsValid(pose) && (!pose.ExclusiveToOneHand || !IsGrabPoseOccupied(pose));
+
+    internal void AttachWithPose(AVRSharpHand hand, UPrimitiveComponent component, UVRSharpHandPose? pose)
     {
         if (hand is null || !SystemLibrary.IsValid(hand) || component is null || !SystemLibrary.IsValid(component) || !CanGrab(hand))
             return;
 
         if (components.TryGetValue(hand, out var previous) && previous == component) return;
         if (hand.IsGrabbing && hand.GrabbedObject != this) return;
+        if (pose is not null && !CanUseGrabPose(pose)) return;
         if (!hand.AttachToComponent(component, "", EAttachmentRule.KeepWorld, EAttachmentRule.KeepWorld, EAttachmentRule.KeepWorld, true)) return;
         GrabbedComponent ??= component;
         components[hand] = component;
+        if (pose is not null) heldPoses[hand] = pose;
+        else heldPoses.Remove(hand);
         hands.Remove(hand);
         hands.Add(hand);
 
@@ -264,6 +286,7 @@ public partial class UVRSharpGrabbable : UActorComponent
         hand.DetachFromActor(EDetachmentRule.KeepWorld, EDetachmentRule.KeepWorld, EDetachmentRule.KeepWorld);
         hands.RemoveAt(idx);
         components.Remove(hand);
+        heldPoses.Remove(hand);
         hand.IsGrabbing = false;
         hand.GrabbedObject = null;
 

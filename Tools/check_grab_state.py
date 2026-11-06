@@ -28,8 +28,11 @@ class AVRSharpHand {
  public bool AttachToComponent(UPrimitiveComponent c,string s,EAttachmentRule a,EAttachmentRule b,EAttachmentRule d,bool w){Attaches++;return Success;}
  public void DetachFromActor(EDetachmentRule a,EDetachmentRule b,EDetachmentRule c){Detaches++;}
 }
+class UVRSharpHandPose { public bool ExclusiveToOneHand; }
 class UVRSharpGrabbable {
  public bool DropWithoutMomentum;
+ private readonly Dictionary<AVRSharpHand,UVRSharpHandPose> heldPoses=new();
+ public void Attach(AVRSharpHand hand,UPrimitiveComponent component)=>AttachWithPose(hand,component,null);
  public float TriggerPressThreshold,TriggerReleaseThreshold;
  private readonly HashSet<AVRSharpHand> activeTriggerHands=new();
  public UPrimitiveComponent? GetHeldComponent(AVRSharpHand hand)=>components.TryGetValue(hand,out var c)&&c.Valid?c:null;
@@ -80,6 +83,22 @@ class Program {
  tool.Attach(b,secondGrip);tool.NotifyGrabTrigger(b,secondGrip,.6f);Check(!tool.IsTriggerActive);
  tool.NotifyGrabTrigger(b,secondGrip,.8f);tool.NotifyGrabTrigger(b,secondGrip,.55f);Check(!tool.IsTriggerActive&&activation.Count==4);
  tool.Detach(b);Check(activation.Count==4);
+ var slotted=new UVRSharpGrabbable();
+ var handle=new UVRSharpHandPose{ExclusiveToOneHand=true};
+ var support=new UVRSharpHandPose{ExclusiveToOneHand=true};
+ slotted.Grabbed+=(h,o,p)=>Check(o.IsGrabPoseOccupied(h==a?handle:support));
+ a.Success=false;slotted.AttachWithPose(a,grip,handle);Check(!slotted.IsGrabPoseOccupied(handle));a.Success=true;
+ slotted.AttachWithPose(a,grip,handle);
+ int attempts=b.Attaches;
+ slotted.AttachWithPose(b,grip,handle);Check(b.Attaches==attempts&&slotted.GrabCount==1);
+ slotted.AttachWithPose(b,grip,support);Check(slotted.GrabCount==2&&slotted.IsGrabPoseOccupied(support));
+ slotted.Detach(a);Check(!slotted.IsGrabPoseOccupied(handle)&&slotted.IsGrabPoseOccupied(support));
+ slotted.AttachWithPose(a,grip,handle);Check(slotted.IsGrabPoseOccupied(handle));slotted.Detach(a);slotted.Detach(b);
+ var shared=new UVRSharpGrabbable();var sharedPose=new UVRSharpHandPose();
+ shared.AttachWithPose(a,grip,sharedPose);shared.AttachWithPose(b,grip,sharedPose);
+ Check(shared.GrabCount==2);shared.Detach(a);Check(shared.IsGrabPoseOccupied(sharedPose));shared.Detach(b);
+ Check(!shared.IsGrabPoseOccupied(sharedPose));
+ Console.WriteLine("Pose occupancy: failed weld, exclusivity, different handles, reuse and shared compatibility passed.");
  Console.WriteLine("Tool trigger activation: hysteresis, per-hand aggregation, context rejection, release and regrab passed.");
  Console.WriteLine("Production grab subset: contextual events, state, failed/duplicate attachment and dual-hand release, and opt-in momentum reset passed.");
  }
@@ -87,7 +106,9 @@ class Program {
 with tempfile.TemporaryDirectory(prefix="vrsharp-grab-check-") as d:
  p=Path(d)
  (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>')
- (p/"Program.cs").write_text(code+members+method("public void Attach(")+method("public void Detach(")+method("internal void NotifyGrabTrigger(")+method("private void SetTriggerHandActive(")+tests)
+ (p/"Program.cs").write_text(code+members+method("public bool IsGrabPoseOccupied(")
+    +" internal bool CanUseGrabPose(UVRSharpHandPose pose) => SystemLibrary.IsValid(pose) && (!pose.ExclusiveToOneHand || !IsGrabPoseOccupied(pose));"
+    +method("internal void AttachWithPose(")+method("public void Detach(")+method("internal void NotifyGrabTrigger(")+method("private void SetTriggerHandActive(")+tests)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
 
 # The real hand release method must recover even when a callback destroys its target.
