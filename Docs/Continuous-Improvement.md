@@ -150,3 +150,5 @@ Combined math, pose/trigger, desktop grip, event state and 192 admission policy 
 - 2026-11-07 PR #8 增加纯支撑抓点，允许双手工具的握把分配不同扳机角色。桌面和 OpenXR 共用激活规则，支撑手保留动画和模拟值。托管回归覆盖两种抓取顺序与换组件。
 
 - 2026-11-07 PR #8 新增 Grabbable 运行时配置报告，定位迁移后的抓点引用及手别缺项、扳机规则冲突和动画过渡时间。提供蓝图 Widget 接线及修复后复查场景，托管报告回归纳入云端检查入口。
+
+- 2026-11-07 PR #8 新增 HandPose 动画 DataAsset 预设，在启动时复用专用动画、淡入淡出和动态手指配置，抓点保留独立位置及交互角色。托管回归覆盖共享预设、占用拒绝及旧抓点兼容，本地资产创建和验收见 LocalUEHandover。

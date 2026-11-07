@@ -279,3 +279,13 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 2. 复制 `/VRSharp/Tests/BP_VRSharpFlashlight`，开启 RequireExplicitGrabPose。在一侧 HandPose 清空 TargetComponent，运行查询，应显示该抓点名称及缺少的手别。恢复到同 Actor 的 Body，确认该项清空。迁移后组件引用指向其他 Actor 或失效时也应定位到具体抓点。
 3. 开启 SingleHandOnly，同时开启任一双手启动规则，应报告配置冲突。把两侧抓点都设为 SupportGripOnly，保持扳机启用，应报告没有可操作扳机的抓点。逐项修复再查询，随后正常抓取、扳机和放下。动画骨架兼容、碰撞响应和按键映射仍按前文进行 PIE 验收。
 4. 云端托管回归覆盖缺失/外部/失效引用、手别配置、规则冲突和修复后复查。两个独立数学检查也在本轮运行。完整 UE 编译、查询蓝图 Glue、PIE 和头显实测待验。
+
+## PR #8 可复用的抓握动画预设（2026-11-07）
+
+新增 `Script/ManagedVRSharp/Core/VRSharpHandPosePreset.cs`，类 `UVRSharpHandPosePreset` 为 DataAsset。HandPose 的 `AnimationPreset` 在 BeginPlay 把动画序列、AnimationKey、淡入淡出时间及动态手指权重复制到当前抓点，现有手部进入/保持/退出链路读取这些值。多个抓点可共用一个预设，运行时各自保留副本。抓点的变换、TargetComponent、Priority、左右手限制、ExclusiveToOneHand 和 SupportGripOnly 继续由抓点本身配置。
+
+1. 用 UE5.7/UnrealSharp0.1 生成 Glue 并完整编译。Content Browser 新建 Miscellaneous > Data Asset，选择 VRSharpHandPosePreset。建议本地创建 `/VRSharp/Tests/DA_ToolGrip_Left` 和 `DA_ToolGrip_Right`，分别填写对应手骨架的 GripAnimation 与 PressedAnimation，EnterBlendSeconds=0.1、ExitBlendSeconds=0.15。也可继续使用 AnimationKey。需要动态手指图时填写 UseFingerWeights、ThumbWeight/IndexWeight/GraspWeight，启用 UseTriggerBlend 并设置 TriggerIndexWeight。
+2. 在两件工具蓝图的左抓点上选择同一个左手预设，右抓点选择右手预设。保留各自的 TargetComponent、局部变换及手别。开始无头显 PIE 后查询当前抓点值，应与预设一致。AnimBP 继续通过 GetAnimationGrabPose 读取 GripAnimation 和 PressedAnimation，并使用 GetGrabPoseBlendWeight 与 GetGrabAnimationTrigger，节点接线见前述专用动画部分。
+3. 抓取两件工具，验证共享动画及各自对齐。按左右扳机，验证按压动画或动态手指混合，松手后按配置淡出。结束 PIE 后修改预设的淡出时间并重新运行，两件工具应一起使用新值。
+4. 如在测试脚本中更换 AnimationPreset，可在空闲时调用 `ApplyAnimationPreset`，检查返回 true。该抓点正在被 Grabbable 持有时返回 false，保持当前动画配置。预览测试先 Stop 并结束淡出后再应用。运行中的预设修改在显式重新应用或下次 BeginPlay 时生效。AnimationPreset 留空时使用原有抓点本地配置。
+5. 云端托管回归编译替身环境中的生产预设和抓点类，覆盖共享初始化、动画引用、动态权重、局部配置保留、占用拒绝及旧配置。两个独立数学检查也在本轮运行。DataAsset 实例、动画资源及 AnimBP 需按上述步骤本地创建和验证，完整 UE 编译、PIE 和头显实测待验。

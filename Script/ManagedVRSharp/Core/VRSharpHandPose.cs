@@ -7,6 +7,40 @@ namespace VRSharp.Core;
 public partial class UVRSharpHandPose : USceneComponent
 {
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UVRSharpHandPosePreset? AnimationPreset { get; set; }
+
+    public override void BeginPlay()
+    {
+        base.BeginPlay();
+        ApplyAnimationPreset();
+    }
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool ApplyAnimationPreset()
+    {
+        var preset = AnimationPreset;
+        if (preset is null || !SystemLibrary.IsValid(preset)) return false;
+        if (Owner is { } owner && SystemLibrary.IsValid(owner))
+        {
+            foreach (var component in owner.GetComponentsByClass<UActorComponent>())
+                if (component is UVRSharpGrabbable grab && SystemLibrary.IsValid(grab) && grab.IsGrabPoseOccupied(this))
+                    return false;
+        }
+        EnterBlendSeconds = preset.EnterBlendSeconds;
+        ExitBlendSeconds = preset.ExitBlendSeconds;
+        GripAnimation = preset.GripAnimation;
+        PressedAnimation = preset.PressedAnimation;
+        AnimationKey = preset.AnimationKey;
+        UseFingerWeights = preset.UseFingerWeights;
+        UseTriggerBlend = preset.UseTriggerBlend;
+        TriggerIndexWeight = preset.TriggerIndexWeight;
+        ThumbWeight = preset.ThumbWeight;
+        IndexWeight = preset.IndexWeight;
+        GraspWeight = preset.GraspWeight;
+        return true;
+    }
+
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial bool ExclusiveToOneHand { get; set; }
 
     // This grip still drives hand animation and counts as physical support.
