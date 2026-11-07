@@ -252,3 +252,12 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 2. 无头显 PIE 中，在空手且道具就绪时点 `CaptureDesktopCheckpoint`，确认返回 true。再抓取道具、按扳机、移动到别处，点 `RestoreDesktopCheckpoint`。预期双手放下、灯光随释放关闭、道具回到保存位置和朝向，根刚体速度归零。用同一初始布置重复抓取。再放一个未登记的道具作为对照，应留在原处。
 3. 在另一只非桌面手仍持有登记道具时复位，预期返回 false，登记道具不移动，也不替其他手放下。登记道具已销毁、根被替换或停止模拟时，检查点也会拒绝复位。上述拒绝可能已清理桌面输入并释放桌面双手。若 UE 在实际传送阶段拒绝某个道具，方法返回 false，已复位的道具及 Pawn 保留已恢复状态，可在修复配置后重试。
 4. 托管回归覆盖空数组兼容、重复登记、先放下再复位、速度归零、外部持握、根替换和传送失败。UE 编译、PIE 中的碰撞及焊接、头显回归待本地验收。
+
+## PR #8 双手工具的主手扳机与副手支撑（2026-11-07）
+
+`Script/ManagedVRSharp/Core/VRSharpGrabbable.cs` 新增 `RequireSupportHandForPrimaryTrigger`。启用时，最早仍持有的主手使用原有按下及释放阈值控制工具，并需要另一只手成功抓住同一道具。副手抓取成功后，如果主手的扳机已超过按下阈值，工具立即启动。任一手放开时停止，副手接任主手后仍需另一手支撑。两个选项同时开启时优先使用原有 `RequireTwoTriggerHands` 双扳机规则。默认关闭新选项。
+
+1. 在 UE5.7/UnrealSharp0.1 生成 Glue 并编译。打开 `/VRSharp/Tests/BP_VRSharpFlashlight` 或同结构的单刚体工具。用一个 Grabbable 和两个 HandPose，保持两个抓点指向 Body，设置左右手及独占限制。在 Grabbable 上关闭 `SingleHandOnly` 和 `RequireTwoTriggerHands`，开启新选项，按下阈值设 0.75，释放阈值设 0.55。手电筒 C# 示例直接消费现有 `TriggerActivationChanged` 事件，无需修改灯光蓝图。
+2. 无头显 PIE 使用两侧独立 Grip 和 Trigger。主手抓住并先按扳机，灯应保持关闭。另一手抓住后灯亮。松开副手应立即熄灭。重新抓住并单按副手扳机，灯仍保持关闭。反过来先抓右手，重复上述流程。开启旧双扳机规则后，验证两侧都按下才亮。
+3. 调试输出读取 `GetIsTriggerActive` 和 `GetPrimaryGrabbingHand`。在 C# 激活回调中，Hand 与 Component 是引起状态变化的抓放或输入操作，例如支撑手抓住后，亮灯通知的 Hand 是支撑手。道具业务逻辑可用主手查询获得实际控制手。既有扳机模拟值事件与手指动画仍各自更新。
+4. 托管回归覆盖失败的副手抓取、支撑加入及离开、主手交接和旧双扳机规则优先。完整 UE 编译、PIE 碰撞和动画以及 OpenXR 头显实测待本地验收。

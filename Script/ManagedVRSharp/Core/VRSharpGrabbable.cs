@@ -58,8 +58,20 @@ public partial class UVRSharpGrabbable : UActorComponent
     [UProperty(PropertyFlags.BlueprintReadOnly | PropertyFlags.EditAnywhere)]
     public partial bool RequireTwoTriggerHands { get; set; }
 
+    // The first holder controls the tool while another hand holds it for support.
+    [UProperty(PropertyFlags.BlueprintReadOnly | PropertyFlags.EditAnywhere)]
+    public partial bool RequireSupportHandForPrimaryTrigger { get; set; }
+
     private readonly HashSet<AVRSharpHand> activeTriggerHands = new();
-    public bool IsTriggerActive => activeTriggerHands.Count >= (RequireTwoTriggerHands ? 2 : 1);
+    private bool publishedTriggerActive;
+    public bool IsTriggerActive => EvaluateTriggerActivation();
+
+    private bool EvaluateTriggerActivation()
+    {
+        if (RequireTwoTriggerHands) return activeTriggerHands.Count >= 2;
+        if (!RequireSupportHandForPrimaryTrigger) return activeTriggerHands.Count != 0;
+        return GrabCount >= 2 && PrimaryGrabbingHand is { } primary && activeTriggerHands.Contains(primary);
+    }
 
     [UFunction(FunctionFlags.BlueprintCallable)]
     public bool GetIsTriggerActive() => IsTriggerActive;
@@ -82,11 +94,17 @@ public partial class UVRSharpGrabbable : UActorComponent
 
     private void SetTriggerHandActive(AVRSharpHand hand, UPrimitiveComponent component, bool active)
     {
-        bool wasActive = IsTriggerActive;
         if (active) activeTriggerHands.Add(hand);
         else activeTriggerHands.Remove(hand);
-        if (wasActive != IsTriggerActive)
-            TriggerActivationChanged?.Invoke(hand, this, component, IsTriggerActive);
+        PublishTriggerActivationChange(hand, component);
+    }
+
+    private void PublishTriggerActivationChange(AVRSharpHand hand, UPrimitiveComponent component)
+    {
+        bool active = IsTriggerActive;
+        if (publishedTriggerActive == active) return;
+        publishedTriggerActive = active;
+        TriggerActivationChanged?.Invoke(hand, this, component, active);
     }
 
     public event Action<UVRSharpGrabbable?>? OnBeforeGrab;
@@ -273,6 +291,7 @@ public partial class UVRSharpGrabbable : UActorComponent
         hand.NotifyGrabbed(this, component);
         Grabbed?.Invoke(hand, this, component);
         PublishPrimaryGrabChange();
+        PublishTriggerActivationChange(hand, component);
     }
 
     /// <summary>

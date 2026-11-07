@@ -39,7 +39,8 @@ class UVRSharpGrabbable {
  private readonly Dictionary<AVRSharpHand,UVRSharpHandPose> heldPoses=new();
  public void Attach(AVRSharpHand hand,UPrimitiveComponent component)=>AttachWithPose(hand,component,null);
  public float TriggerPressThreshold,TriggerReleaseThreshold;
- public bool RequireTwoTriggerHands;
+ public bool RequireTwoTriggerHands,RequireSupportHandForPrimaryTrigger;
+ private bool publishedTriggerActive;
  private readonly HashSet<AVRSharpHand> activeTriggerHands=new();
  public UPrimitiveComponent? GetHeldComponent(AVRSharpHand hand)=>components.TryGetValue(hand,out var c)&&c.Valid?c:null;
  public bool AdmissionAllowed=true; public bool CanGrab(AVRSharpHand hand)=>AdmissionAllowed;
@@ -106,6 +107,37 @@ class Program {
  interlocked.Detach(a);interlocked.Detach(b);
  Check(interlockChanges.SequenceEqual(new[]{true,false,true,false,true,false}));
  Console.WriteLine("Tool interlock: simultaneous trigger requirement, release and regrab passed.");
+ var supported=new UVRSharpGrabbable{TriggerPressThreshold=.75f,TriggerReleaseThreshold=.55f,
+  RequireSupportHandForPrimaryTrigger=true};
+ var supportChanges=new List<(AVRSharpHand,UPrimitiveComponent,bool)>();
+ supported.TriggerActivationChanged+=(h,o,p,v)=>{
+  Check(o==supported&&o.IsTriggerActive==v);supportChanges.Add((h,p,v));
+ };
+ supported.Attach(a,grip);supported.NotifyGrabTrigger(a,grip,.9f);
+ Check(!supported.IsTriggerActive&&supportChanges.Count==0);
+ b.Success=false;supported.Attach(b,secondGrip);
+ Check(!supported.IsTriggerActive&&supportChanges.Count==0);b.Success=true;
+ supported.Attach(b,secondGrip);Check(supported.IsTriggerActive);
+ supported.NotifyGrabTrigger(b,secondGrip,.9f);
+ supported.NotifyGrabTrigger(a,grip,.55f);Check(!supported.IsTriggerActive);
+ supported.NotifyGrabTrigger(a,grip,.8f);Check(supported.IsTriggerActive);
+ supported.Detach(b);Check(!supported.IsTriggerActive);
+ supported.Attach(b,secondGrip);Check(supported.IsTriggerActive);
+ supported.Detach(a);Check(!supported.IsTriggerActive&&supported.PrimaryGrabbingHand==b);
+ supported.Attach(a,grip);Check(!supported.IsTriggerActive);
+ supported.NotifyGrabTrigger(a,grip,1);Check(!supported.IsTriggerActive);
+ supported.NotifyGrabTrigger(b,secondGrip,1);Check(supported.IsTriggerActive);
+ supported.Detach(b);supported.Detach(a);
+ Check(supportChanges.SequenceEqual(new[]{
+  (b,secondGrip,true),(a,grip,false),(a,grip,true),(b,secondGrip,false),
+  (b,secondGrip,true),(a,grip,false),(b,secondGrip,true),(b,secondGrip,false)
+ }));
+ supported.RequireTwoTriggerHands=true;
+ supported.Attach(a,grip);supported.Attach(b,secondGrip);
+ supported.NotifyGrabTrigger(a,grip,1);Check(!supported.IsTriggerActive);
+ supported.NotifyGrabTrigger(b,secondGrip,1);Check(supported.IsTriggerActive);
+ supported.Detach(a);supported.Detach(b);
+ Console.WriteLine("Supported tool: primary trigger, successful support grab, handoff, release and two-trigger precedence passed.");
  var slotted=new UVRSharpGrabbable();
  var handle=new UVRSharpHandPose{ExclusiveToOneHand=true};
  var support=new UVRSharpHandPose{ExclusiveToOneHand=true};
@@ -159,7 +191,8 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-grab-check-") as d:
  (p/"Program.cs").write_text(code+members+method("public bool IsGrabPoseOccupied(")
     +" internal bool CanUseGrabPose(UVRSharpHandPose pose) => SystemLibrary.IsValid(pose) && (!pose.ExclusiveToOneHand || !IsGrabPoseOccupied(pose));"
     +method("internal void AttachWithPose(")+method("public void Detach(")+method("internal void NotifyGrabTrigger(")
-    +method("private void SetTriggerHandActive(")+method("private void PublishPrimaryGrabChange(")+tests)
+    +method("private void SetTriggerHandActive(")+method("private void PublishPrimaryGrabChange(")
+    +method("private bool EvaluateTriggerActivation(")+method("private void PublishTriggerActivationChange(")+tests)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
 
 # The real hand release method must recover even when a callback destroys its target.
