@@ -8,6 +8,23 @@ Check(VRSharpMathHelper.StepFingerContactTarget(.7f,.7f,r,r,1f/90)==.7f,"edge co
 Check(VRSharpMathHelper.StepFingerContactTarget(.7f,.7f,1.01f*r,r,1f/90)>.7f,"separation recloses");
 Check(VRSharpMathHelper.StepFingerContactTarget(.7f,.7f,0,r,1f/90)<.7f,"inside collision opens");
 Check(VRSharpMathHelper.StepFingerContactTarget(.7f,1,.4f*r,r,1f/90)<.7f,"opening immediately cancels queued closure");
+// Invalid observations hold a usable pose; +infinity is the no-contact sentinel.
+foreach (float invalid in new[] { float.NaN, float.NegativeInfinity })
+ Check(VRSharpMathHelper.StepFingerContactTarget(.7f,1f,invalid,r,1f/90)==.7f,"invalid distance holds current pose");
+Check(VRSharpMathHelper.StepFingerContactTarget(.7f,.7f,float.PositiveInfinity,r,1f/90)>.7f,"no-contact sentinel recloses");
+foreach (float invalid in new[] { 0f, -1f, float.NaN, float.PositiveInfinity, float.NegativeInfinity }) {
+ Check(VRSharpMathHelper.StepFingerContactTarget(.7f,.4f,0,r,invalid)==.4f,"invalid timestep preserves target");
+ Check(VRSharpMathHelper.StepFingerContactTarget(.7f,.4f,0,invalid,1f/90)==.4f,"invalid radius preserves target");
+}
+foreach (float invalid in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity }) {
+ Check(VRSharpMathHelper.StepFingerContactTarget(invalid,.6f,r,r,1f/90)==.6f,"invalid current recovers from target");
+ Check(VRSharpMathHelper.StepFingerContactTarget(.6f,invalid,r,r,1f/90)==.6f,"invalid target recovers from current");
+ Check(VRSharpMathHelper.StepFingerContactTarget(invalid,invalid,r,r,1f/90)==0,"both invalid recover open");
+ Check(VRSharpMathHelper.StepFingerContactTarget(invalid,invalid,0,r,0)==0,"invalid timestep still returns finite pose");
+}
+Check(VRSharpMathHelper.StepFingerContactTarget(-1,2,r,r,1f/90)==0,"current lower bound");
+Check(VRSharpMathHelper.StepFingerContactTarget(2,-1,r,r,1f/90)==1,"current upper bound");
+Check(VRSharpMathHelper.StepFingerContactTarget(.7f,.7f,-1,r,1f/90)==VRSharpMathHelper.StepFingerContactTarget(.7f,.7f,0,r,1f/90),"finite negative penetration clamps to zero");
 foreach(int fps in new[]{30,60,90,120})
 foreach(float initial in new[]{0f,1f}) {
  float current=initial,target=initial,dt=1f/fps,min=1,max=0;
