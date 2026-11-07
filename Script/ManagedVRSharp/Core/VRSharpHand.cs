@@ -41,6 +41,11 @@ public partial class AVRSharpHand : AActor
 
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere), Category("VRInputActions")]
     public partial UInputAction? TriggerAction { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? AnalogTriggerAction { get; set; }
+    private bool xrTriggerBound;
+    private float xrTrigger;
+
 
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere), Category("VRInputActions")]
     public partial UInputAction? AXAction { get; set; }
@@ -88,8 +93,94 @@ public partial class AVRSharpHand : AActor
     private float targetGraspWeight;
     private float targetIndexWeight;
     private float targetThumbWeight;
+    private UVRSharpHandPose? animationPose;
+    private float poseBlendWeight;
+    private bool poseExiting;
+    private float exitPoseTrigger;
+    private bool previewingGrabPose;
+    private float previewPoseTrigger;
+
+    // Visual pose survives logical release until its configured fade has completed.
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public UVRSharpHandPose? GetAnimationGrabPose()
+        => animationPose is not null && SystemLibrary.IsValid(animationPose) ? animationPose : null;
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public float GetGrabPoseBlendWeight() => GetAnimationGrabPose() is null ? 0 : poseBlendWeight;
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool IsGrabPoseExiting() => GetAnimationGrabPose() is not null && poseExiting;
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public float GetGrabAnimationTrigger()
+    {
+        if (GetAnimationGrabPose() is null) return 0;
+        if (poseExiting) return exitPoseTrigger;
+        return previewingGrabPose ? previewPoseTrigger : activePoseTrigger;
+    }
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool StartGrabPosePreview(UVRSharpHandPose pose)
+    {
+        if (IsGrabbing || pose is null || !SystemLibrary.IsValid(pose) ||
+            (IsLeft ? pose.DisableLeftHand : pose.DisableRightHand)) return false;
+        BeginPoseAnimation(pose);
+        previewingGrabPose = true;
+        return true;
+    }
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool SetGrabPosePreviewTrigger(float value)
+    {
+        if (!previewingGrabPose || IsGrabbing || GetAnimationGrabPose() is null || !float.IsFinite(value)) return false;
+        previewPoseTrigger = Math.Clamp(value, 0f, 1f);
+        return true;
+    }
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public void StopGrabPosePreview()
+    {
+        if (previewingGrabPose) EndPoseAnimation(previewPoseTrigger);
+    }
+
+    private void EndPoseAnimation(float releasedTrigger)
+    {
+        previewingGrabPose = false;
+        previewPoseTrigger = 0;
+        var pose = GetAnimationGrabPose();
+        poseExiting = pose is not null && float.IsFinite(pose.ExitBlendSeconds) && pose.ExitBlendSeconds > 0;
+        exitPoseTrigger = poseExiting ? releasedTrigger : 0;
+        if (!poseExiting)
+        {
+            animationPose = null;
+            poseBlendWeight = 0;
+        }
+    }
+
+    private void BeginPoseAnimation(UVRSharpHandPose? pose)
+    {
+        animationPose = pose;
+        poseExiting = false;
+        exitPoseTrigger = 0;
+        previewingGrabPose = false;
+        previewPoseTrigger = 0;
+        poseBlendWeight = pose is not null && float.IsFinite(pose.EnterBlendSeconds) && pose.EnterBlendSeconds > 0 ? 0 : 1;
+        if (pose is null) poseBlendWeight = 0;
+    }
+
+    private void AdvancePoseAnimation(float deltaSeconds)
+    {
+        var pose = GetAnimationGrabPose();
+        if (pose is null) { BeginPoseAnimation(null); return; }
+        if (!float.IsFinite(deltaSeconds) || deltaSeconds <= 0) return;
+        float duration = poseExiting ? pose.ExitBlendSeconds : pose.EnterBlendSeconds;
+        float step = float.IsFinite(duration) && duration > 0 ? deltaSeconds / duration : 1;
+        poseBlendWeight = Math.Clamp(poseBlendWeight + (poseExiting ? -step : step),0,1);
+        if (poseExiting && poseBlendWeight == 0) { animationPose = null; poseExiting = false; }
+    }
+
     private UVRSharpHandPose? activeGrabPose;
     private float activePoseTrigger;
+    // Only changed accepted values; context is the actual held primitive.
+    public event Action<AVRSharpHand, UVRSharpGrabbable, UPrimitiveComponent, float>? GrabTriggerChanged;
     public event Action<AVRSharpHand, UVRSharpHandPose>? GrabPoseEntered;
     public event Action<AVRSharpHand, UVRSharpHandPose>? GrabPoseExited;
     [UFunction(FunctionFlags.BlueprintCallable)]
@@ -101,6 +192,7 @@ public partial class AVRSharpHand : AActor
     private bool useAuthoredFingerWeights;
     private bool useTriggerBlend;
     private float authoredIndexWeight, triggerIndexWeight;
+    private bool externalFingerInput;
 
     #endregion
 
@@ -138,10 +230,28 @@ public partial class AVRSharpHand : AActor
 
     private UPhysicsSettings? physicsSettings;
     private bool hasTrackingTarget;
+    internal void ResetTrackingHistory() => hasTrackingTarget = false;
     private FVector previousTargetLocation;
     private FQuat previousTargetRotation;
 
     #endregion
+
+
+    public event Action<AVRSharpHand, UVRSharpGrabbable, UPrimitiveComponent>? Grabbed;
+    public event Action<AVRSharpHand, UVRSharpGrabbable, UPrimitiveComponent>? Released;
+    internal ulong GrabRevision { get; private set; }
+    internal void NotifyGrabbed(UVRSharpGrabbable item, UPrimitiveComponent component)
+    {
+        GrabRevision = unchecked(GrabRevision + 1);
+        Grabbed?.Invoke(this, item, component);
+    }
+    internal void NotifyReleased(UVRSharpGrabbable item, UPrimitiveComponent component)
+        => Released?.Invoke(this, item, component);
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public UPrimitiveComponent? GetCurrentGrabComponent()
+        => IsGrabbing && GrabbedObject is { } item && SystemLibrary.IsValid(item)
+            ? item.GetHeldComponent(this) : null;
 
     #region  抓握事件
 
@@ -202,19 +312,30 @@ public partial class AVRSharpHand : AActor
         inputComponent.BindAction(TouchedAction!, ETriggerEvent.Started, ThumbTouchedAnim, out _);
         inputComponent.BindAction(AXAction!, ETriggerEvent.Started, ThumbClickedAnim, out _);
         inputComponent.BindAction(BYAction!, ETriggerEvent.Started, ThumbClickedAnim, out _);
-        inputComponent.BindAction(TriggerAction!, ETriggerEvent.Started, IndexClickedAnim, out _);
+        var triggerAction = AnalogTriggerAction ?? TriggerAction;
+        if (triggerAction is not null)
+        {
+            if (AnalogTriggerAction is not null)
+                inputComponent.BindAction(triggerAction, ETriggerEvent.Triggered, OnAnalogTrigger, out _);
+            else
+                inputComponent.BindAction(triggerAction, ETriggerEvent.Started, IndexClickedAnim, out _);
+            inputComponent.BindAction(triggerAction, ETriggerEvent.Completed, IndexReleasedAnim, out _);
+            inputComponent.BindAction(triggerAction, ETriggerEvent.Canceled, IndexReleasedAnim, out _);
+            xrTriggerBound = true;
+        }
         inputComponent.BindAction(GripAction!, ETriggerEvent.Started, GraspClickedAnim, out _);
 
         inputComponent.BindAction(TouchedAction!, ETriggerEvent.Completed, ThumbReleasedAnim, out _);
         inputComponent.BindAction(AXAction!, ETriggerEvent.Completed, ThumbReleasedAnim, out _);
         inputComponent.BindAction(BYAction!, ETriggerEvent.Completed, ThumbReleasedAnim, out _);
-        inputComponent.BindAction(TriggerAction!, ETriggerEvent.Completed, IndexReleasedAnim, out _);
         inputComponent.BindAction(GripAction!, ETriggerEvent.Completed, GraspReleasedAnim, out _);
     }
 
     override public void Tick(float deltaSeconds)
     {
         base.Tick(deltaSeconds);
+        AdvancePoseAnimation(deltaSeconds);
+        ApplyXrTrigger();
         if (!IsGrabbing)
             RefreshGrabTarget();
 
@@ -269,7 +390,7 @@ public partial class AVRSharpHand : AActor
         hasTrackingTarget = true;
 
         // Weld 后手组件不再拥有独立刚体，必须读取并驱动被抓物体的物理岛。
-        var rigidbody = IsGrabbing && GrabbedObject?.GrabbedComponent is { } grabbedBody ? grabbedBody : body;
+        var rigidbody = IsGrabbing && GetCurrentGrabComponent() is { } grabbedBody ? grabbedBody : body;
         var angularVelocity = rigidbody.GetPhysicsAngularVelocityInRadians();
         var angularAcceleration = VRSharpMathHelper.ComputeSpringAcceleration(
             VRSharpMathHelper.RotationVector(targetRotation, body.WorldRotation),
@@ -344,7 +465,7 @@ public partial class AVRSharpHand : AActor
     [UFunction]
     private void ThumbTouchedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
     {
-        if (IsGrabbing) return;
+        if (IsGrabbing || externalFingerInput) return;
         if (targetThumbWeight != 1f)
             targetThumbWeight = 0.5f;
     }
@@ -352,42 +473,59 @@ public partial class AVRSharpHand : AActor
     [UFunction]
     private void ThumbClickedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
     {
-        if (IsGrabbing) return;
+        if (IsGrabbing || externalFingerInput) return;
         targetThumbWeight = 1f;
     }
 
     [UFunction]
-    private void IndexClickedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
+    private void IndexClickedAnim(FInputActionValue value, float elapsed, float triggered, UInputAction action)
     {
-        if (IsGrabbing) return;
-        targetIndexWeight = 1f;
+        xrTrigger = 1;
+    }
+
+    [UFunction]
+    private void OnAnalogTrigger(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+    {
+        xrTrigger = FingerInput.Normalize((float)value.GetAxis3D().X, xrTrigger);
+    }
+
+    private void ApplyXrTrigger()
+    {
+        if (!xrTriggerBound) return;
+        if (IsGrabbing)
+        {
+            if (xrTrigger != activePoseTrigger) SetGrabTrigger(xrTrigger);
+        }
+        else if (!externalFingerInput)
+        {
+            targetIndexWeight = xrTrigger;
+        }
     }
 
     [UFunction]
     private void GraspClickedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
     {
-        if (IsGrabbing) return;
+        if (IsGrabbing || externalFingerInput) return;
         targetGraspWeight = 1f;
     }
 
     [UFunction]
     private void ThumbReleasedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
     {
-        if (IsGrabbing) return;
+        if (IsGrabbing || externalFingerInput) return;
         targetThumbWeight = 0f;
     }
 
     [UFunction]
-    private void IndexReleasedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
+    private void IndexReleasedAnim(FInputActionValue value, float elapsed, float triggered, UInputAction action)
     {
-        if (IsGrabbing) return;
-        targetIndexWeight = 0f;
+        xrTrigger = 0;
     }
 
     [UFunction]
     private void GraspReleasedAnim(FInputActionValue value, float arg1, float arg2, UInputAction action)
     {
-        if (IsGrabbing) return;
+        if (IsGrabbing || externalFingerInput) return;
         targetGraspWeight = 0f;
     }
 
@@ -408,7 +546,7 @@ public partial class AVRSharpHand : AActor
     /// </summary>
     private void UpdateGrabAnimation(float deltaSeconds)
     {
-        if (HandMesh is null || GrabbedObject?.GrabbedComponent is not { } component) return;
+        if (HandMesh is null || GetCurrentGrabComponent() is not { } component) return;
         targetThumbWeight = VRSharpMathHelper.StepFingerContactTarget(ThumbWeight, targetThumbWeight,
             FingerContactDistance(ThumbName, component), FingerRadius, deltaSeconds);
         targetIndexWeight = VRSharpMathHelper.StepFingerContactTarget(IndexWeight, targetIndexWeight,
@@ -511,13 +649,12 @@ public partial class AVRSharpHand : AActor
     {
         if (IsGrabbing || !TrySelectGrabHit(hits, specificTarget, out var selected, out var grabbable))
             return false;
-        Grab(grabbable!, selected.ImpactPoint, selected.ImpactNormal, selected.Component.Object!);
-        return true;
+        return Grab(grabbable!, selected.ImpactPoint, selected.ImpactNormal, selected.Component.Object!);
     }
 
     // Use the actual collision surface and the same origin/range for highlight and grip.
     private bool TrySelectGrabHit(IList<FHitResult> hits, UVRSharpGrabbable? specificTarget,
-        out FHitResult selected, out UVRSharpGrabbable? grabbable)
+        out FHitResult selected, out UVRSharpGrabbable? grabbable, UPrimitiveComponent? specificComponent = null)
     {
         selected = default;
         grabbable = null;
@@ -528,12 +665,14 @@ public partial class AVRSharpHand : AActor
         foreach (var hit in hits)
         {
             var component = hit.Component.Object;
+            if (specificComponent is not null && component != specificComponent) continue;
             var candidate = FindGrabbable(component);
             if (candidate is null || (specificTarget is not null && candidate != specificTarget)) continue;
             var point = hit.ImpactPoint;
             if (hit.StartPenetrating && !TryGetGrabPoint(component!, origin, out point)) continue;
             double distance = FVector.DistanceSquared(origin, point);
             if (!double.IsFinite(distance) || distance > radius * radius || distance >= best) continue;
+            if (candidate.RequireExplicitGrabPose && FindExplicitGrabPose(candidate, component!) is null) continue;
             best = distance;
             selected = hit;
             selected.ImpactPoint = point;
@@ -547,7 +686,7 @@ public partial class AVRSharpHand : AActor
     {
         if (component is null || !SystemLibrary.IsValid(component) || component.Owner == this) return null;
         foreach (var item in component.Owner.GetComponentsByClass<UActorComponent>())
-            if (item is UVRSharpGrabbable grabbable && SystemLibrary.IsValid(grabbable)) return grabbable;
+            if (item is UVRSharpGrabbable grabbable && SystemLibrary.IsValid(grabbable) && grabbable.CanGrab(this)) return grabbable;
         return null;
     }
 
@@ -591,17 +730,72 @@ public partial class AVRSharpHand : AActor
     /// <param name="location"></param>
     /// <param name="normal"></param>
     /// <param name="component"></param>
-    private void Grab(UVRSharpGrabbable grabbable, FVector location, FVector normal, UPrimitiveComponent component)
+    private UVRSharpHandPose? FindExplicitGrabPose(UVRSharpGrabbable grabbable, UPrimitiveComponent component)
     {
+        UVRSharpHandPose? best = null;
+        double bestDistance = double.PositiveInfinity;
+        if (Palm is null || !SystemLibrary.IsValid(Palm)) return null;
+        var palmLocation = Palm.WorldLocation;
+        var candidates = grabbable.Owner?.GetComponentsByClass<USceneComponent>();
+        if (candidates is null) return null;
+        foreach (var candidate in candidates.OfType<UVRSharpHandPose>())
+        {
+            if (!grabbable.CanUseGrabPose(candidate) || candidate.TargetComponent != component ||
+                (IsLeft ? candidate.DisableLeftHand : candidate.DisableRightHand)) continue;
+            var distance = FVector.DistanceSquared(palmLocation, candidate.WorldLocation);
+            if (!double.IsFinite(distance)) continue;
+            if (best is null || candidate.Priority > best.Priority ||
+                (candidate.Priority == best.Priority && (distance < bestDistance ||
+                 (distance == bestDistance && string.CompareOrdinal(SystemLibrary.GetObjectName(candidate), SystemLibrary.GetObjectName(best)) < 0))))
+            {
+                best = candidate;
+                bestDistance = distance;
+            }
+        }
+        return best;
+    }
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool TryGrabAtPose(UVRSharpGrabbable grabbable, UVRSharpHandPose pose)
+    {
+        if (IsGrabbing || grabbable is null || !SystemLibrary.IsValid(grabbable) ||
+            pose is null || !SystemLibrary.IsValid(pose)) return false;
+        var component = pose.TargetComponent;
+        if (component is null || !IsRequestedPoseValid(grabbable, component, pose)) return false;
+
+        EnvironmentCheck(grabbable, component);
+        if (!TrySelectGrabHit(targetHitResults, grabbable, out var hit, out _, component)) return false;
+        return Grab(grabbable, hit.ImpactPoint, hit.ImpactNormal, component, pose);
+    }
+
+    private bool IsRequestedPoseValid(UVRSharpGrabbable grabbable, UPrimitiveComponent component, UVRSharpHandPose pose)
+    {
+        if (!grabbable.CanUseGrabPose(pose) || !SystemLibrary.IsValid(component) ||
+            grabbable.Owner is null || pose.Owner != grabbable.Owner || component.Owner != grabbable.Owner ||
+            pose.TargetComponent != component || (IsLeft ? pose.DisableLeftHand : pose.DisableRightHand) || Palm is null)
+            return false;
+        return double.IsFinite(FVector.DistanceSquared(Palm.WorldLocation, pose.WorldLocation));
+    }
+
+    private bool Grab(UVRSharpGrabbable grabbable, FVector location, FVector normal, UPrimitiveComponent component,
+        UVRSharpHandPose? requestedPose = null)
+    {
+        if (!SystemLibrary.IsValid(grabbable) || !SystemLibrary.IsValid(component) || !grabbable.CanGrab(this)) return false;
         // 事件
         OnBeforeGrab?.Invoke(grabbable);
+        if (!SystemLibrary.IsValid(grabbable) || !SystemLibrary.IsValid(component) || !grabbable.CanGrab(this)) return false;
         grabbable.CallOnBeforeGrab();
+        if (!SystemLibrary.IsValid(grabbable) || !SystemLibrary.IsValid(component) || !grabbable.CanGrab(this)) return false;
 
         // 检查是否有预定义的手部姿态
         var componentName = SystemLibrary.GetObjectName(component);
-        UVRSharpHandPose? handPose = null;
+        if (requestedPose is not null && (IsGrabbing || !IsRequestedPoseValid(grabbable, component, requestedPose)))
+            return false;
+        UVRSharpHandPose? handPose = requestedPose ?? FindExplicitGrabPose(grabbable, component);
+        bool alignPalmFrame = handPose is not null;
+        if (handPose is null && grabbable.RequireExplicitGrabPose) return false;
 
-        if (grabbable.GrabPoses is not null)
+        if (handPose is null && grabbable.GrabPoses is not null)
         {
             // 使用 Contains 匹配：只要组件名包含字典中的 key 就匹配
             var matchedKey = grabbable.GrabPoses.Keys.FirstOrDefault(key => componentName.Contains(key));
@@ -613,13 +807,23 @@ public partial class AVRSharpHand : AActor
                 var poseComponents = allComponents?.OfType<UVRSharpHandPose>().ToList();
 
                 // 使用 Contains 匹配 HandPose 组件名称
-                handPose = poseComponents?.FirstOrDefault(p => SystemLibrary.IsValid(p) && !(IsLeft ? p.DisableLeftHand : p.DisableRightHand) && SystemLibrary.GetObjectName(p).Contains(poseName));
+                handPose = poseComponents?.FirstOrDefault(p => grabbable.CanUseGrabPose(p) && !(IsLeft ? p.DisableLeftHand : p.DisableRightHand) && SystemLibrary.GetObjectName(p).Contains(poseName));
             }
         }
 
-        if (handPose is not null)
+        if (handPose is not null && alignPalmFrame)
         {
-            // 使用预定义姿态：让 Palm 对齐到 HandPose 的位置和旋转
+            if (Palm is not { } palm || !SystemLibrary.IsValid(palm) ||
+                HandRigidbody is not { } root || !SystemLibrary.IsValid(root)) return false;
+
+            var alignment = VRSharpMathHelper.SolvePalmAlignment(
+                ActorLocation, root.WorldRotation, palm.WorldLocation, palm.WorldRotation,
+                handPose.WorldLocation, handPose.WorldRotation);
+            SetActorTransform(new FTransform(alignment.Rotation, alignment.Location, ActorScale3D), false, out _, true);
+        }
+        else if (handPose is not null)
+        {
+            // 旧名称表抓点按手 Actor 旋转制作，保持原有对齐方式。
             SetActorRotation(handPose.WorldRotation);
             SetActorLocation(handPose.WorldLocation - (Palm!.WorldLocation - ActorLocation));
         }
@@ -644,17 +848,20 @@ public partial class AVRSharpHand : AActor
             targetGraspWeight = VRSharpMathHelper.NormalizePoseWeight(handPose.GraspWeight);
         }
         else SetAllAnimationWeights(1f);
-        grabbable.Attach(this, component);
+        grabbable.AttachWithPose(this, component, handPose);
+        if (!IsGrabbing || GrabbedObject != grabbable) return false;
         if (IsGrabbing && GrabbedObject == grabbable)
         {
             activeGrabPose = handPose;
+            BeginPoseAnimation(handPose);
             activePoseTrigger = 0;
             if (handPose is not null) GrabPoseEntered?.Invoke(this, handPose);
         }
 
         // 事件
         OnAfterGrab?.Invoke(grabbable);
-        grabbable.CallOnAfterGrab();
+        if (SystemLibrary.IsValid(grabbable)) grabbable.CallOnAfterGrab();
+        return true;
     }
 
     [UFunction(FunctionFlags.BlueprintCallable)]
@@ -666,32 +873,43 @@ public partial class AVRSharpHand : AActor
         // 缓存：回调里可能会清空/销毁
         var grabbable = GrabbedObject;
 
+        float releasedTrigger = activePoseTrigger;
+        SetGrabTrigger(0);
         OnBeforeRelease?.Invoke(grabbable);
         if (grabbable is not null && SystemLibrary.IsValid(grabbable))
             grabbable.CallOnBeforeRelease();
 
-        grabbable?.Detach(this);
+        // 回调可能销毁原对象，不能仅用 CLR null 判断原生对象生命周期。
+        if (grabbable is not null && SystemLibrary.IsValid(grabbable))
+            grabbable.Detach(this);
+        else
+        {
+            DetachFromActor(EDetachmentRule.KeepWorld, EDetachmentRule.KeepWorld, EDetachmentRule.KeepWorld);
+            IsGrabbing = false;
+            GrabbedObject = null;
+        }
 
         // 松开抓握时，手指回到张开（空手时再按原有输入逻辑调整）
         var exitedPose = activeGrabPose;
         activeGrabPose = null;
+        EndPoseAnimation(releasedTrigger);
         activePoseTrigger = 0;
         useAuthoredFingerWeights = false;
         useTriggerBlend = false;
         SetAllAnimationWeights(0f);
-        if (exitedPose is not null) GrabPoseExited?.Invoke(this, exitedPose);
+        if (exitedPose is not null && SystemLibrary.IsValid(exitedPose)) GrabPoseExited?.Invoke(this, exitedPose);
 
         OnAfterRelease?.Invoke(grabbable);
         if (grabbable is not null && SystemLibrary.IsValid(grabbable))
             grabbable.CallOnAfterRelease();
 
-        HandRigidbody!.SimulatePhysics = true;
+        if (HandRigidbody is { } body && SystemLibrary.IsValid(body)) body.SimulatePhysics = true;
     }
 
     /// <summary>
     /// 每帧检测手下方的 grabbable，缓存到 targetHitResults
     /// </summary>
-    private void EnvironmentCheck(UVRSharpGrabbable? specificTarget = null)
+    private void EnvironmentCheck(UVRSharpGrabbable? specificTarget = null, UPrimitiveComponent? specificComponent = null)
     {
         targetHitResults.Clear();
         if (GrabSphere is null) return;
@@ -702,7 +920,7 @@ public partial class AVRSharpHand : AActor
         // start at the sphere centre: the rear half must not win the forward ray.
         MultiLineTraceForObjects(origin, origin - GrabSphere.UpVector * radius,
             GrabObjectTypes, false, [this], debug, out var lineHits, true);
-        if (TrySelectGrabHit(lineHits, specificTarget, out var lineHit, out _))
+        if (TrySelectGrabHit(lineHits, specificTarget, out var lineHit, out _, specificComponent))
         {
             targetHitResults.Add(lineHit);
             return;
@@ -712,6 +930,7 @@ public partial class AVRSharpHand : AActor
         if (!SphereOverlapComponents(origin, radius, GrabObjectTypes, default, [this], out var components)) return;
         foreach (var component in components)
         {
+            if (specificComponent is not null && component != specificComponent) continue;
             var candidate = FindGrabbable(component);
             if (candidate is null || (specificTarget is not null && candidate != specificTarget)
                 || !TryGetGrabPoint(component, origin, out var point)) continue;
@@ -725,7 +944,7 @@ public partial class AVRSharpHand : AActor
             });
         }
         // Cache a single winner so highlighting and actual grabbing cannot diverge.
-        if (TrySelectGrabHit(targetHitResults, specificTarget, out var nearest, out _))
+        if (TrySelectGrabHit(targetHitResults, specificTarget, out var nearest, out _, specificComponent))
         {
             targetHitResults.Clear();
             targetHitResults.Add(nearest);
@@ -737,10 +956,41 @@ public partial class AVRSharpHand : AActor
     [UFunction(FunctionFlags.BlueprintCallable)]
     public bool SetGrabTrigger(float value)
     {
-        if (!IsGrabbing || GetActiveGrabPose() is null || !float.IsFinite(value)) return false;
-        activePoseTrigger = Math.Clamp(value,0,1);
+        if (!IsGrabbing || !float.IsFinite(value)) return false;
+        var item = GrabbedObject;
+        var component = GetCurrentGrabComponent();
+        if (item is null || !SystemLibrary.IsValid(item) || component is null || !SystemLibrary.IsValid(component)) return false;
+        float next = Math.Clamp(value,0,1);
+        bool changed = next != activePoseTrigger;
+        activePoseTrigger = next;
         if (useTriggerBlend) targetIndexWeight = VRSharpMathHelper.BlendPoseWeight(authoredIndexWeight, triggerIndexWeight, activePoseTrigger);
+        if (changed)
+        {
+            GrabTriggerChanged?.Invoke(this, item, component, activePoseTrigger);
+            if (SystemLibrary.IsValid(item)) item.NotifyGrabTrigger(this, component, activePoseTrigger);
+        }
         return true;
+    }
+
+
+    /// <summary>空手模拟输入入口；PC滑条与OpenXR模拟轴共用。抓取接触期间返回false。</summary>
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public bool SetFingerInput(float thumb, float index, float grasp)
+    {
+        if (IsGrabbing) return false;
+        externalFingerInput = true;
+        targetThumbWeight = FingerInput.Normalize(thumb, targetThumbWeight);
+        targetIndexWeight = FingerInput.Normalize(index, targetIndexWeight);
+        targetGraspWeight = FingerInput.Normalize(grasp, targetGraspWeight);
+        return true;
+    }
+
+    /// <summary>适配器断开时交还旧输入；抓握期间不覆盖接触姿势。</summary>
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public void ClearFingerInput()
+    {
+        externalFingerInput = false;
+        if (!IsGrabbing) SetAllAnimationWeights(0f);
     }
 
     private void SetAllAnimationWeights(float weight)

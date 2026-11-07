@@ -1,0 +1,291 @@
+"""Production Attach/Detach subset; native calls are doubles, not UE validation."""
+from pathlib import Path
+import subprocess,tempfile
+root=Path(__file__).resolve().parents[1]
+s=(root/"Script/ManagedVRSharp/Core/VRSharpGrabbable.cs").read_text()
+def method(sig):
+ start=s.index(sig); i=s.index("{",start); depth=1; end=i+1
+ while depth:
+  depth+=(s[end]=="{")-(s[end]=="}");end+=1
+ return s[start:end]
+members="\n".join(l for l in s.splitlines() if any(x in l for x in [
+ "public UPrimitiveComponent? GrabbedComponent =>", "public AVRSharpHand? PrimaryGrabbingHand =>",
+ "Component) publishedPrimaryGrab;", "? PrimaryGrabChanged;", "public int GrabCount =>", "public bool IsGrabbed =>",
+ "public bool IsTriggerActive =>", "public event Action<AVRSharpHand", "public bool IsHeldBy(",
+ "public AVRSharpHand[] GetGrabbingHands()",
+]))
+code="""using System; using System.Linq; using System.Collections.Generic;
+enum EAttachmentRule {KeepWorld} enum EDetachmentRule {KeepWorld}
+class UPrimitiveComponent {
+ public bool Valid=true,Simulating=true;
+ public int LinearVelocity=10,AngularVelocity=20;
+ public bool IsSimulatingPhysics()=>Simulating;
+ public void SetPhysicsLinearVelocity(int velocity){LinearVelocity=velocity;}
+ public void SetPhysicsAngularVelocityInRadians(int velocity,bool add,string? bone){AngularVelocity=velocity;}
+}
+static class SystemLibrary {public static bool IsValid(object o)=>o is UPrimitiveComponent c?c.Valid:o!=null;}
+class AVRSharpHand {
+ public int GrabNotices,ReleaseNotices;
+ public void NotifyGrabbed(UVRSharpGrabbable g,UPrimitiveComponent c){if(!IsGrabbing||GrabbedObject!=g)throw new Exception();GrabNotices++;}
+ public void NotifyReleased(UVRSharpGrabbable g,UPrimitiveComponent c){if(IsGrabbing||GrabbedObject!=null)throw new Exception();ReleaseNotices++;}
+ public bool IsGrabbing,Success=true; public UVRSharpGrabbable? GrabbedObject;
+ public int Attaches,Detaches;
+ public bool AttachToComponent(UPrimitiveComponent c,string s,EAttachmentRule a,EAttachmentRule b,EAttachmentRule d,bool w){Attaches++;return Success;}
+ public void DetachFromActor(EDetachmentRule a,EDetachmentRule b,EDetachmentRule c){Detaches++;}
+}
+class UVRSharpHandPose { public bool ExclusiveToOneHand,SupportGripOnly; }
+class UVRSharpGrabbable {
+ public bool DropWithoutMomentum;
+ private readonly Dictionary<AVRSharpHand,UVRSharpHandPose> heldPoses=new();
+ public void Attach(AVRSharpHand hand,UPrimitiveComponent component)=>AttachWithPose(hand,component,null);
+ public float TriggerPressThreshold,TriggerReleaseThreshold;
+ public bool RequireTwoTriggerHands,RequireSupportHandForPrimaryTrigger;
+ private bool publishedTriggerActive;
+ private readonly HashSet<AVRSharpHand> activeTriggerHands=new();
+ public UPrimitiveComponent? GetHeldComponent(AVRSharpHand hand)=>components.TryGetValue(hand,out var c)&&c.Valid?c:null;
+ public bool AdmissionAllowed=true; public bool CanGrab(AVRSharpHand hand)=>AdmissionAllowed;
+ private readonly List<AVRSharpHand> hands=new();
+ private readonly Dictionary<AVRSharpHand,UPrimitiveComponent> components=new();
+"""
+tests="""}
+class Program {
+ static void Check(bool x){if(!x)throw new Exception("grab lifecycle regression");}
+ static void Main(){
+ var g=new UVRSharpGrabbable();var a=new AVRSharpHand();var b=new AVRSharpHand();var c=new UPrimitiveComponent();int entered=0,left=0;
+ g.Grabbed+=(h,o,p)=>{Check(o==g&&p==c&&g.IsHeldBy(h)&&h.GrabbedObject==g);entered++;};
+ g.Released+=(h,o,p)=>{Check(o==g&&p==c&&!g.IsHeldBy(h)&&!h.IsGrabbing);left++;};
+ g.AdmissionAllowed=false;g.Attach(a,c);Check(!g.IsGrabbed&&entered==0);g.AdmissionAllowed=true;
+ Check(!g.IsGrabbed);a.Success=false;g.Attach(a,c);Check(!g.IsGrabbed&&entered==0);
+ a.Success=true;g.Attach(a,c);g.Attach(a,c);Check(g.GrabCount==1&&entered==1);
+ g.Attach(b,c);var snapshot=g.GetGrabbingHands();g.Detach(a);g.Detach(a);
+ Check(g.IsGrabbed&&g.GrabCount==1&&left==1&&snapshot.Length==2&&b.IsGrabbing);
+ g.Detach(b);Check(!g.IsGrabbed&&g.GrabCount==0&&left==2&&entered==2);
+ Check(c.LinearVelocity==10&&c.AngularVelocity==20);
+ Check(a.GrabNotices==1&&b.GrabNotices==1&&a.ReleaseNotices==1&&b.ReleaseNotices==1);
+ var drop=new UVRSharpGrabbable{DropWithoutMomentum=true};
+ var first=new UPrimitiveComponent();var last=new UPrimitiveComponent();
+ drop.Attach(a,first);drop.Attach(b,last);drop.Detach(a);
+ Check(first.LinearVelocity==10&&last.LinearVelocity==10&&last.AngularVelocity==20);
+ drop.Released+=(h,o,p)=>Check(!o.IsGrabbed&&p==last&&p.LinearVelocity==0&&p.AngularVelocity==0);
+ drop.Detach(b);Check(first.LinearVelocity==10&&first.AngularVelocity==20);
+ foreach(var skipped in new[]{new UPrimitiveComponent{Simulating=false},new UPrimitiveComponent()}){
+  var item=new UVRSharpGrabbable{DropWithoutMomentum=true};item.Attach(a,skipped);
+  if(skipped.Simulating)skipped.Valid=false;
+  item.Detach(a);Check(!item.IsGrabbed&&skipped.LinearVelocity==10&&skipped.AngularVelocity==20);
+ }
+ Check(b.Attaches>1&&b.Detaches>0);
+
+ c.Valid=false;g.Attach(a,c);Check(entered==2);
+ var tool=new UVRSharpGrabbable{TriggerPressThreshold=.75f,TriggerReleaseThreshold=.55f};
+ var grip=new UPrimitiveComponent();var secondGrip=new UPrimitiveComponent();
+ var activation=new List<(AVRSharpHand, UPrimitiveComponent, bool)>();
+ tool.TriggerActivationChanged+=(h,o,p,v)=>{Check(o==tool&&o.IsTriggerActive==v);activation.Add((h,p,v));};
+ tool.NotifyGrabTrigger(a,grip,1);Check(!tool.IsTriggerActive);
+ tool.Attach(a,grip);tool.Attach(b,secondGrip);
+ tool.NotifyGrabTrigger(a,secondGrip,1);Check(!tool.IsTriggerActive);
+ tool.NotifyGrabTrigger(a,grip,.8f);tool.NotifyGrabTrigger(a,grip,.6f);Check(tool.IsTriggerActive&&activation.Count==1);
+ tool.NotifyGrabTrigger(b,secondGrip,.9f);tool.NotifyGrabTrigger(a,grip,0);tool.Detach(a);
+ Check(tool.IsTriggerActive&&activation.Count==1);
+ tool.Detach(b);Check(!tool.IsTriggerActive&&activation.SequenceEqual(new[]{(a,grip,true),(b,secondGrip,false)}));
+ tool.Attach(b,secondGrip);tool.NotifyGrabTrigger(b,secondGrip,.6f);Check(!tool.IsTriggerActive);
+ tool.NotifyGrabTrigger(b,secondGrip,.8f);tool.NotifyGrabTrigger(b,secondGrip,.55f);Check(!tool.IsTriggerActive&&activation.Count==4);
+ tool.Detach(b);Check(activation.Count==4);
+ var interlocked=new UVRSharpGrabbable{TriggerPressThreshold=.75f,TriggerReleaseThreshold=.55f,RequireTwoTriggerHands=true};
+ var interlockChanges=new List<bool>();
+ interlocked.TriggerActivationChanged+=(h,o,p,v)=>{Check(o==interlocked&&o.IsTriggerActive==v);interlockChanges.Add(v);};
+ interlocked.Attach(a,grip);
+ interlocked.NotifyGrabTrigger(a,grip,.85f);interlocked.NotifyGrabTrigger(a,grip,.9f);
+ Check(!interlocked.IsTriggerActive&&interlockChanges.Count==0);
+ interlocked.Attach(b,secondGrip);Check(!interlocked.IsTriggerActive);
+ interlocked.NotifyGrabTrigger(b,secondGrip,.8f);Check(interlocked.IsTriggerActive);
+ interlocked.NotifyGrabTrigger(a,grip,.6f);Check(interlocked.IsTriggerActive);
+ interlocked.NotifyGrabTrigger(a,grip,.55f);Check(!interlocked.IsTriggerActive);
+ interlocked.NotifyGrabTrigger(a,grip,.8f);Check(interlocked.IsTriggerActive);
+ interlocked.Detach(b);Check(!interlocked.IsTriggerActive);
+ interlocked.Attach(b,secondGrip);Check(!interlocked.IsTriggerActive);
+ interlocked.NotifyGrabTrigger(b,secondGrip,.8f);Check(interlocked.IsTriggerActive);
+ interlocked.Detach(a);interlocked.Detach(b);
+ Check(interlockChanges.SequenceEqual(new[]{true,false,true,false,true,false}));
+ Console.WriteLine("Tool interlock: simultaneous trigger requirement, release and regrab passed.");
+ var supported=new UVRSharpGrabbable{TriggerPressThreshold=.75f,TriggerReleaseThreshold=.55f,
+  RequireSupportHandForPrimaryTrigger=true};
+ var supportChanges=new List<(AVRSharpHand,UPrimitiveComponent,bool)>();
+ supported.TriggerActivationChanged+=(h,o,p,v)=>{
+  Check(o==supported&&o.IsTriggerActive==v);supportChanges.Add((h,p,v));
+ };
+ supported.Attach(a,grip);supported.NotifyGrabTrigger(a,grip,.9f);
+ Check(!supported.IsTriggerActive&&supportChanges.Count==0);
+ b.Success=false;supported.Attach(b,secondGrip);
+ Check(!supported.IsTriggerActive&&supportChanges.Count==0);b.Success=true;
+ supported.Attach(b,secondGrip);Check(supported.IsTriggerActive);
+ supported.NotifyGrabTrigger(b,secondGrip,.9f);
+ supported.NotifyGrabTrigger(a,grip,.55f);Check(!supported.IsTriggerActive);
+ supported.NotifyGrabTrigger(a,grip,.8f);Check(supported.IsTriggerActive);
+ supported.Detach(b);Check(!supported.IsTriggerActive);
+ supported.Attach(b,secondGrip);Check(supported.IsTriggerActive);
+ supported.Detach(a);Check(!supported.IsTriggerActive&&supported.PrimaryGrabbingHand==b);
+ supported.Attach(a,grip);Check(!supported.IsTriggerActive);
+ supported.NotifyGrabTrigger(a,grip,1);Check(!supported.IsTriggerActive);
+ supported.NotifyGrabTrigger(b,secondGrip,1);Check(supported.IsTriggerActive);
+ supported.Detach(b);supported.Detach(a);
+ Check(supportChanges.SequenceEqual(new[]{
+  (b,secondGrip,true),(a,grip,false),(a,grip,true),(b,secondGrip,false),
+  (b,secondGrip,true),(a,grip,false),(b,secondGrip,true),(b,secondGrip,false)
+ }));
+ supported.RequireTwoTriggerHands=true;
+ supported.Attach(a,grip);supported.Attach(b,secondGrip);
+ supported.NotifyGrabTrigger(a,grip,1);Check(!supported.IsTriggerActive);
+ supported.NotifyGrabTrigger(b,secondGrip,1);Check(supported.IsTriggerActive);
+ supported.Detach(a);supported.Detach(b);
+ Console.WriteLine("Supported tool: primary trigger, successful support grab, handoff, release and two-trigger precedence passed.");
+ var roles=new UVRSharpGrabbable{TriggerPressThreshold=.75f,TriggerReleaseThreshold=.55f,
+  RequireSupportHandForPrimaryTrigger=true};
+ var foregrip=new UVRSharpHandPose{SupportGripOnly=true};
+ var analogSamples=new List<(AVRSharpHand,float)>();
+ roles.GrabTriggerChanged+=(h,o,p,value)=>analogSamples.Add((h,value));
+ foreach(bool supportFirst in new[]{true,false}){
+  if(supportFirst)roles.AttachWithPose(a,grip,foregrip);
+  roles.Attach(b,secondGrip);
+  if(!supportFirst)roles.AttachWithPose(a,grip,foregrip);
+  Check(roles.PrimaryGrabbingHand==(supportFirst?a:b)&&roles.GetPrimaryTriggerHand()==b);
+  roles.NotifyGrabTrigger(a,grip,.9f);Check(!roles.IsTriggerActive);
+  roles.NotifyGrabTrigger(b,secondGrip,.9f);Check(roles.IsTriggerActive);
+  roles.Detach(a);Check(!roles.IsTriggerActive);
+  roles.Detach(b);Check(roles.GetPrimaryTriggerHand()==null);
+ }
+ Check(analogSamples.SequenceEqual(new[]{(a,.9f),(b,.9f),(a,.9f),(b,.9f)}));
+ roles.RequireSupportHandForPrimaryTrigger=false;
+ roles.Attach(a,grip);roles.NotifyGrabTrigger(a,grip,1);Check(roles.IsTriggerActive);
+ roles.AttachWithPose(a,secondGrip,foregrip);
+ Check(!roles.IsTriggerActive&&roles.GetPrimaryTriggerHand()==null);
+ roles.NotifyGrabTrigger(a,secondGrip,1);Check(!roles.IsTriggerActive);
+ roles.Detach(a);
+ roles.RequireTwoTriggerHands=true;
+ roles.AttachWithPose(a,grip,foregrip);roles.Attach(b,secondGrip);
+ roles.NotifyGrabTrigger(a,grip,1);roles.NotifyGrabTrigger(b,secondGrip,1);
+ Check(!roles.IsTriggerActive);roles.Detach(a);roles.Detach(b);
+ Console.WriteLine("Support grip roles: either grab order, analog samples, retarget and two-trigger restrictions passed.");
+ var slotted=new UVRSharpGrabbable();
+ var handle=new UVRSharpHandPose{ExclusiveToOneHand=true};
+ var support=new UVRSharpHandPose{ExclusiveToOneHand=true};
+ slotted.Grabbed+=(h,o,p)=>Check(o.IsGrabPoseOccupied(h==a?handle:support));
+ a.Success=false;slotted.AttachWithPose(a,grip,handle);Check(!slotted.IsGrabPoseOccupied(handle));a.Success=true;
+ slotted.AttachWithPose(a,grip,handle);
+ int attempts=b.Attaches;
+ slotted.AttachWithPose(b,grip,handle);Check(b.Attaches==attempts&&slotted.GrabCount==1);
+ slotted.AttachWithPose(b,grip,support);Check(slotted.GrabCount==2&&slotted.IsGrabPoseOccupied(support));
+ slotted.Detach(a);Check(!slotted.IsGrabPoseOccupied(handle)&&slotted.IsGrabPoseOccupied(support));
+ slotted.AttachWithPose(a,grip,handle);Check(slotted.IsGrabPoseOccupied(handle));slotted.Detach(a);slotted.Detach(b);
+ var shared=new UVRSharpGrabbable();var sharedPose=new UVRSharpHandPose();
+ shared.AttachWithPose(a,grip,sharedPose);shared.AttachWithPose(b,grip,sharedPose);
+ Check(shared.GrabCount==2);shared.Detach(a);Check(shared.IsGrabPoseOccupied(sharedPose));shared.Detach(b);
+ Check(!shared.IsGrabPoseOccupied(sharedPose));
+ var primary=new UVRSharpGrabbable();
+ var changes=new List<(AVRSharpHand?,UPrimitiveComponent?,AVRSharpHand?,UPrimitiveComponent?)>();
+ var order=new List<string>();
+ primary.PrimaryGrabChanged+=(o,oldHand,oldPart,newHand,newPart)=>{
+  Check(o==primary&&o.PrimaryGrabbingHand==newHand&&o.GrabbedComponent==newPart);
+  changes.Add((oldHand,oldPart,newHand,newPart));order.Add("primary");
+ };
+ primary.Grabbed+=(h,o,p)=>order.Add("grabbed");
+ primary.Released+=(h,o,p)=>order.Add("released");
+ a.Success=false;primary.Attach(a,grip);Check(changes.Count==0);a.Success=true;
+ primary.Attach(a,grip);primary.Attach(a,grip);
+ primary.Attach(b,secondGrip);primary.Detach(b);
+ Check(primary.PrimaryGrabbingHand==a&&primary.GrabbedComponent==grip&&changes.Count==1);
+ primary.Attach(b,secondGrip);primary.Detach(a);primary.Detach(b);
+ Check(changes.SequenceEqual(new (AVRSharpHand?,UPrimitiveComponent?,AVRSharpHand?,UPrimitiveComponent?)[]{
+  (null,null,a,grip),(a,grip,b,secondGrip),(b,secondGrip,null,null)
+ }));
+ Check(order.SequenceEqual(new[]{"grabbed","primary","grabbed","released","grabbed","released","primary","released","primary"}));
+ primary.Attach(a,grip);primary.Attach(a,secondGrip);
+ Check(changes[^1]==(a,grip,a,secondGrip));primary.Detach(a);
+ var nested=new UVRSharpGrabbable();
+ int nestedChanges=0;
+ nested.Grabbed+=(h,o,p)=>o.Detach(h);
+ nested.PrimaryGrabChanged+=(o,oldHand,oldPart,newHand,newPart)=>nestedChanges++;
+ nested.Attach(a,grip);
+ Check(nestedChanges==0&&nested.PrimaryGrabbingHand==null);
+ Console.WriteLine("Primary grab: two-hand transfer, secondary release, retarget, callback order and nested release passed.");
+ Console.WriteLine("Pose occupancy: failed weld, exclusivity, different handles, reuse and shared compatibility passed.");
+ Console.WriteLine("Tool trigger activation: hysteresis, per-hand aggregation, context rejection, release and regrab passed.");
+ Console.WriteLine("Production grab subset: contextual events, state, failed/duplicate attachment and dual-hand release, and opt-in momentum reset passed.");
+ }
+}"""
+with tempfile.TemporaryDirectory(prefix="vrsharp-grab-check-") as d:
+ p=Path(d)
+ (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>')
+ (p/"Program.cs").write_text(code+members+method("public bool IsGrabPoseOccupied(")
+    +" internal bool CanUseGrabPose(UVRSharpHandPose pose) => SystemLibrary.IsValid(pose) && (!pose.ExclusiveToOneHand || !IsGrabPoseOccupied(pose));"
+    +method("internal void AttachWithPose(")+method("public void Detach(")+method("internal void NotifyGrabTrigger(")
+    +method("private void SetTriggerHandActive(")+method("private void PublishPrimaryGrabChange(")
+    +method("private bool EvaluateTriggerActivation(")+method("private void PublishTriggerActivationChange(")
+    +method("public AVRSharpHand? GetPrimaryTriggerHand(")
+    +" private bool AllowsToolTrigger(AVRSharpHand hand) => "
+    +s.split("private bool AllowsToolTrigger(AVRSharpHand hand)",1)[1].split("=>",1)[1].split(";",1)[0]+";"
+    +tests)
+ subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
+
+# The real hand release method must recover even when a callback destroys its target.
+s = (root / "Script/ManagedVRSharp/Core/VRSharpHand.cs").read_text()
+release_code = '''using System;
+enum EDetachmentRule { KeepWorld }
+class Native { public bool Valid=true; }
+class UVRSharpHandPose : Native {
+ public float ExitBlendSeconds=>Valid?.2f:throw new Exception("invalid pose read");
+}
+class Body : Native { public bool SimulatePhysics; }
+static class SystemLibrary { public static bool IsValid(Native value)=>value.Valid; }
+class UVRSharpGrabbable : Native {
+ public Action? Before;
+ public int Detaches,After;
+ public void CallOnBeforeRelease(){if(!Valid)throw new Exception("invalid before callback");Before?.Invoke();}
+ public void CallOnAfterRelease(){if(!Valid)throw new Exception("invalid after callback");After++;}
+ public void Detach(AVRSharpHand hand){if(!Valid)throw new Exception("invalid native detach");Detaches++;hand.IsGrabbing=false;hand.GrabbedObject=null;}
+}
+class AVRSharpHand {
+ public bool IsGrabbing=true,poseExiting,previewingGrabPose;
+ public float previewPoseTrigger;
+ public bool useAuthoredFingerWeights=true,useTriggerBlend=true;
+ public float activePoseTrigger=.8f,exitPoseTrigger,poseBlendWeight=1,Weights=1;
+ public UVRSharpGrabbable? GrabbedObject=new();
+ public UVRSharpHandPose? activeGrabPose,animationPose;
+ public Body? HandRigidbody=new();
+ public int NativeDetaches;
+ public event Action<UVRSharpGrabbable?>? OnBeforeRelease,OnAfterRelease;
+ public event Action<AVRSharpHand,UVRSharpHandPose>? GrabPoseExited;
+ public void SetGrabTrigger(float value){activePoseTrigger=value;}
+ public void SetAllAnimationWeights(float value){Weights=value;}
+ public UVRSharpHandPose? GetAnimationGrabPose()=>animationPose is {Valid:true}?animationPose:null;
+ public void DetachFromActor(EDetachmentRule a,EDetachmentRule b,EDetachmentRule c){NativeDetaches++;}
+'''
+release_tests = '''}
+class Program {
+ static void Check(bool ok){if(!ok)throw new Exception("hand release recovery regression");}
+ static void Main(){
+  foreach(int invalidation in new[]{0,1,2}){
+   var hand=new AVRSharpHand();var item=hand.GrabbedObject!;var pose=new UVRSharpHandPose();
+   hand.animationPose=hand.activeGrabPose=pose;int exited=0,after=0;
+   hand.GrabPoseExited+=(h,p)=>exited++;hand.OnAfterRelease+=g=>after++;
+   void Destroy(){item.Valid=false;pose.Valid=false;}
+   if(invalidation==0)Destroy();
+   if(invalidation==1)hand.OnBeforeRelease+=g=>Destroy();
+   if(invalidation==2)item.Before=Destroy;
+   hand.Release();hand.Release();
+   Check(!hand.IsGrabbing&&hand.GrabbedObject==null&&hand.NativeDetaches==1&&item.Detaches==0&&item.After==0);
+   Check(hand.animationPose==null&&hand.activeGrabPose==null&&!hand.poseExiting&&exited==0&&after==1);
+   Check(hand.activePoseTrigger==0&&hand.Weights==0&&!hand.useAuthoredFingerWeights&&!hand.useTriggerBlend&&hand.HandRigidbody!.SimulatePhysics);
+  }
+  var normal=new AVRSharpHand();var valid=normal.GrabbedObject!;normal.animationPose=normal.activeGrabPose=new();
+  normal.Release();Check(valid.Detaches==1&&valid.After==1&&normal.NativeDetaches==0&&normal.poseExiting&&normal.activePoseTrigger==0&&normal.GetGrabAnimationTrigger()==.8f);
+  normal.animationPose=null;Check(normal.GetGrabAnimationTrigger()==0);
+  var missing=new AVRSharpHand{GrabbedObject=null,HandRigidbody=null};missing.Release();Check(!missing.IsGrabbing&&missing.NativeDetaches==1);
+  Console.WriteLine("Hand release recovery: stale/null target, both callback destruction paths and valid pose exit passed.");
+ }
+}
+'''
+with tempfile.TemporaryDirectory(prefix="vrsharp-hand-release-") as d:
+ p=Path(d)
+ (p/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project>')
+ (p/"Program.cs").write_text(release_code+method("public void Release()")+method("public float GetGrabAnimationTrigger()")+method("private void EndPoseAnimation(")+release_tests)
+ subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
