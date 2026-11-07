@@ -7,6 +7,30 @@ static void Require(bool valid, string message)
     if (!valid) throw new Exception(message);
 }
 
+static void RequireVectorNear(FVector actual, FVector expected, string message)
+{
+    Require((actual - expected).LengthSquared() < 1e-20, message);
+}
+
+var planar = VRSharpMovementMath.SanitizePlanarInput(new FVector(0.25, -0.5, 42));
+RequireVectorNear(planar, new FVector(0.25, -0.5, 0), "Preserve finite planar input and discard vertical axis");
+RequireVectorNear(
+    VRSharpMovementMath.SanitizePlanarInput(new FVector(3, 4, 99)),
+    new FVector(0.6, 0.8, 0),
+    "Normalize input outside the unit circle");
+RequireVectorNear(
+    VRSharpMovementMath.SanitizePlanarInput(new FVector(double.NaN, 0.75, double.PositiveInfinity)),
+    new FVector(0, 0.75, 0),
+    "Recover one invalid axis without losing the valid axis");
+RequireVectorNear(
+    VRSharpMovementMath.SanitizePlanarInput(new FVector(double.NegativeInfinity, double.PositiveInfinity, 0)),
+    FVector.Zero,
+    "Reject non-finite planar input");
+var hugePlanar = VRSharpMovementMath.SanitizePlanarInput(new FVector(double.MaxValue, double.MaxValue, 0));
+Require(double.IsFinite(hugePlanar.X) && double.IsFinite(hugePlanar.Y)
+    && Math.Abs(hugePlanar.LengthSquared() - 1) < 1e-12,
+    "Normalize huge finite input without overflow");
+
 var rows = new List<object>();
 foreach (int fps in new[] { 15, 30, 60, 72, 90, 120, 144, 240 })
 {

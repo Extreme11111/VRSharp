@@ -405,8 +405,7 @@ public partial class AVRSharpPlayer : APawn
     [UFunction(FunctionFlags.BlueprintCallable)]
     public void SetMovementInput(FVector axes)
     {
-        axes.Z = 0;
-        inputVelocity = axes.LengthSquared() > 1 ? MathLibrary.Normal(axes) : axes;
+        inputVelocity = VRSharpMovementMath.SanitizePlanarInput(axes);
     }
 
     private bool SweepBody(FVector start, FVector end, out FHitResult hit)
