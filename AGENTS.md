@@ -8,6 +8,8 @@ Keep physical VR interaction usable first. Prioritize reproducible bugs and regr
 
 One Grabbable component remains the primary authoring entry point. Related options belong in its configuration or reusable pose/data assets. Keep helper components internal where practical. Preserve existing Blueprint-visible names, serialized properties and collision profile semantics unless a migration is provided.
 
+Production VR and PC play use the same VRSharpPlayer. Keep keyboard/mouse input and desktop hand targets in the separate DesktopInput component and its settings asset; share the existing body locomotion and hand interaction paths. VRSharpDesktopTestPawn is a free-flight regression harness, not the production PC fallback. Do not require users to replace their Pawn or GameMode just to run without a headset.
+
 ## Validation and claims
 
 Use small, coherent changes. Add meaningful tests for changed algorithms, boundary cases and failure paths. Run both standalone math projects with .NET 9. These tests link production math but do not compile the complete UnrealSharp gameplay assembly.

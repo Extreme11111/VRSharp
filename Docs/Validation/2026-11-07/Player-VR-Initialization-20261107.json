@@ -1,0 +1,35 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "case": "forced_vr_uses_original_player",
+      "passed": true
+    },
+    {
+      "case": "forced_vr_not_desktop",
+      "passed": true
+    },
+    {
+      "case": "desktop_adapter_not_bound",
+      "passed": true
+    },
+    {
+      "case": "xr_mapping_added_by_player",
+      "passed": true
+    },
+    {
+      "case": "desktop_mapping_absent",
+      "passed": true
+    },
+    {
+      "case": "hmd_camera_lock_preserved",
+      "passed": true
+    },
+    {
+      "case": "motion_controller_ticks_preserved",
+      "passed": true
+    }
+  ],
+  "headset_tested": false,
+  "scope": "forced initialization branch only"
+}

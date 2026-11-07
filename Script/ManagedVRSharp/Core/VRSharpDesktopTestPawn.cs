@@ -7,7 +7,7 @@ using UnrealSharp.EnhancedInput;
 
 namespace VRSharp.Core;
 
-// Free-flying interaction test rig: intentionally not a locomotion/collision substitute.
+// Free-flying test rig. Production PC fallback lives in VRSharpPlayer.DesktopInput.
 [UClass]
 public partial class AVRSharpDesktopTestPawn : APawn
 {

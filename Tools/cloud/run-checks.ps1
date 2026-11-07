@@ -8,7 +8,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "$name failed with exit code $LASTEXITCODE" }
     }
     foreach ($name in @('check_desktop_grip', 'check_grab_state', 'check_pose_selection', 'check_finger_input_state',
-                         'check_flashlight_demo', 'check_grab_setup', 'check_pose_preset', 'test_host_collision')) {
+                         'check_flashlight_demo', 'check_grab_setup', 'check_pose_preset', 'test_host_collision', 'check_player_mode')) {
         python "Tools/$name.py"
         if ($LASTEXITCODE -ne 0) { throw "$name failed with exit code $LASTEXITCODE" }
     }

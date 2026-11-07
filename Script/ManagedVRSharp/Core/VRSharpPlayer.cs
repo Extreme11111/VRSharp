@@ -30,6 +30,13 @@ public partial class AVRSharpPlayer : APawn
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere, DefaultComponent = true, AttachmentComponent = nameof(VROrigin))]
     public partial UCameraComponent? Camera { get; set; }
 
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere, DefaultComponent = true)]
+    public partial UVRSharpDesktopInput? DesktopInput { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial EVRSharpControlMode ControlMode { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadOnly)]
+    public partial bool IsDesktopMode { get; set; }
+
     // Camera 局部空间中的颈部标记，可直接在蓝图中调整位置。
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere, DefaultComponent = true, AttachmentComponent = nameof(Camera))]
     public partial USceneComponent? Neck { get; set; }
@@ -201,17 +208,23 @@ public partial class AVRSharpPlayer : APawn
             HeadCollision.SetCollisionResponseToChannel((ECollisionChannel)channel,
                 BodyCapsule.GetCollisionResponseToChannel((ECollisionChannel)channel));
 
-        // 设置追踪原点为"地面"，确保HMD的高度计算是基于玩家游玩空间的地面。
-        UHeadMountedDisplayFunctionLibrary.TrackingOrigin = EHMDTrackingOrigin.LocalFloor;
+        IsDesktopMode = VRSharpControlModeSelection.Resolve(ControlMode,
+            UHeadMountedDisplayFunctionLibrary.IsHeadMountedDisplayConnected(),
+            UHeadMountedDisplayFunctionLibrary.IsHeadMountedDisplayEnabled()) == EVRSharpControlMode.Desktop;
+        if (IsDesktopMode) DesktopInput!.Initialize(this);
+        else UHeadMountedDisplayFunctionLibrary.TrackingOrigin = EHMDTrackingOrigin.LocalFloor;
 
         // 创建手部
         LeftHand = SpawnActor(LeftHandClass, default, ESpawnActorCollisionHandlingMethod.AlwaysSpawn);
         RightHand = SpawnActor(RightHandClass, default, ESpawnActorCollisionHandlingMethod.AlwaysSpawn);
         LeftHand.InitializeHand(true);
         RightHand.InitializeHand(false);
-        LeftHand.SetActorTransform(new FTransform(LeftControllerMesh!.WorldRotation, LeftControllerMesh.WorldLocation, LeftHand.ActorScale3D), false, out _, true);
-        RightHand.SetActorTransform(new FTransform(RightControllerMesh!.WorldRotation, RightControllerMesh.WorldLocation, RightHand.ActorScale3D), false, out _, true);
+        var leftTarget = GetHandTrackingTarget(true);
+        var rightTarget = GetHandTrackingTarget(false);
+        LeftHand.SetActorTransform(new FTransform(leftTarget.Rotation, leftTarget.Location, LeftHand.ActorScale3D), false, out _, true);
+        RightHand.SetActorTransform(new FTransform(rightTarget.Rotation, rightTarget.Location, RightHand.ActorScale3D), false, out _, true);
 
+        if (IsDesktopMode) return;
         GetLocalPlayerSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetPlayerController(0)).AddMappingContext(InputMappingContext, 0);
 
         if (InputComponent is UEnhancedInputComponent uEnhancedInputComponent)
@@ -229,6 +242,7 @@ public partial class AVRSharpPlayer : APawn
     public override void Tick(float deltaSeconds)
     {
         base.Tick(deltaSeconds);
+        if (IsDesktopMode) DesktopInput!.Update(deltaSeconds);
 
         // 修正碰撞(匹配身高&水平位移)
         stepVisualOffset *= Math.Exp(-Math.Max(StepSmoothingSpeed, 0) * deltaSeconds);
@@ -237,9 +251,11 @@ public partial class AVRSharpPlayer : APawn
         ConstrainHeadCollision();
 
         // 手部跟随
-        var locationForceLeft = LeftHand!.UpdateTracking(LeftControllerMesh!.WorldLocation, LeftControllerMesh!.WorldRotation, deltaSeconds);
+        var leftTarget = GetHandTrackingTarget(true);
+        var rightTarget = GetHandTrackingTarget(false);
+        var locationForceLeft = LeftHand!.UpdateTracking(leftTarget.Location, leftTarget.Rotation, deltaSeconds);
         BodyCapsule!.AddForceAtLocation(-locationForceLeft, LeftHand!.ActorLocation);
-        var locationForceRight = RightHand!.UpdateTracking(RightControllerMesh!.WorldLocation, RightControllerMesh!.WorldRotation, deltaSeconds);
+        var locationForceRight = RightHand!.UpdateTracking(rightTarget.Location, rightTarget.Rotation, deltaSeconds);
         BodyCapsule!.AddForceAtLocation(-locationForceRight, RightHand!.ActorLocation);
 
         // 移动
@@ -250,6 +266,25 @@ public partial class AVRSharpPlayer : APawn
 
         // 检测手部距离，过远则强制松开
         CheckHandDistance();
+    }
+
+    private FTransform GetHandTrackingTarget(bool left)
+    {
+        if (IsDesktopMode) return DesktopInput!.GetHandTarget(left);
+        var target = left ? LeftControllerMesh! : RightControllerMesh!;
+        return new FTransform(target.WorldRotation, target.WorldLocation, new FVector(1, 1, 1));
+    }
+
+    public override void EndPlay(EEndPlayReason reason)
+    {
+        DesktopInput?.Shutdown();
+        foreach (var hand in new[] { LeftHand, RightHand })
+            if (hand is not null && SystemLibrary.IsValid(hand))
+            {
+                hand.Release();
+                if (SystemLibrary.IsValid(hand)) hand.DestroyActor();
+            }
+        base.EndPlay(reason);
     }
 
     [UFunction]

@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "case": "existing_lab_original_player_possessed",
+      "passed": true
+    },
+    {
+      "case": "existing_lab_auto_pc",
+      "passed": true
+    },
+    {
+      "case": "existing_lab_component_configured",
+      "passed": true
+    },
+    {
+      "case": "existing_lab_physical_body",
+      "passed": true
+    },
+    {
+      "case": "existing_lab_hands_ready",
+      "passed": true
+    }
+  ],
+  "headset_tested": false
+}

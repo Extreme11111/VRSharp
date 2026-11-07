@@ -17,6 +17,7 @@ A physical VR framework plugin for Unreal Engine, with C# gameplay through Unrea
 - Modular VRSharpLab environment, editable Blender sources, imported meshes/materials, and lab collision helpers.
 - Physics locomotion and Lumen stability work in progress.
 - Desktop interaction acceptance Pawn, independent two-hand input, configurable grip admission, contextual events, authored poses, tool trigger rules and repeatable checkpoints.
+- Automatic desktop fallback on the original VRSharpPlayer, with a separate input component/settings asset and shared physical locomotion/hands. See [PC mode setup and validation](Docs/Player-Desktop-Fallback.md).
 
 The local integration includes `/VRSharp/Maps/VRSharpDesktopTest` and a separate XR interaction acceptance room. See [the UE integration and validation record](Docs/Local-Integration-2026-11-07.md) for controls, native pose playback, 93 engine checks and remaining headset/packaging work. On Windows, run the independent checks with `Tools/cloud/run-checks.ps1`.
 

@@ -21,3 +21,4 @@ python3 Tools/check_grab_setup.py
 
 python3 Tools/check_pose_preset.py
 python3 Tools/test_host_collision.py
+python3 Tools/check_player_mode.py

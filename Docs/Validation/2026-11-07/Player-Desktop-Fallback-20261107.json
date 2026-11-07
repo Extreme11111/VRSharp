@@ -1,0 +1,107 @@
+{
+  "cases": [
+    {
+      "case": "original_player_auto_mode",
+      "passed": true
+    },
+    {
+      "case": "desktop_component_bound",
+      "passed": true
+    },
+    {
+      "case": "desktop_mapping_only",
+      "passed": true
+    },
+    {
+      "case": "camera_hmd_lock_disabled",
+      "passed": true
+    },
+    {
+      "case": "physical_body_retained",
+      "passed": true
+    },
+    {
+      "case": "xr_targets_disabled",
+      "passed": true
+    },
+    {
+      "case": "no_duplicate_hands",
+      "passed": true
+    },
+    {
+      "case": "standing_eye_height",
+      "passed": true,
+      "height_cm": 170.00000004473503
+    },
+    {
+      "case": "grounded_idle",
+      "passed": true
+    },
+    {
+      "case": "wasd_forward_axis",
+      "passed": true,
+      "delta_x": 169.83307172871764,
+      "delta_y": 6.643616287491707e-16
+    },
+    {
+      "case": "movement_completed_stops",
+      "passed": true,
+      "horizontal_speed": 0.0
+    },
+    {
+      "case": "mouse_look_applied",
+      "passed": true
+    },
+    {
+      "case": "camera_local_hand_follows_0",
+      "passed": true,
+      "error_cm": 0.02940365756571608
+    },
+    {
+      "case": "camera_local_hand_follows_1",
+      "passed": true,
+      "error_cm": 0.02940413220770267
+    },
+    {
+      "case": "movement_follows_view_yaw",
+      "passed": true,
+      "delta_x": -0.0019394472632465742,
+      "delta_y": 290.65904088292285
+    },
+    {
+      "case": "independent_mouse_grips",
+      "passed": true
+    },
+    {
+      "case": "independent_tool_triggers",
+      "passed": true
+    },
+    {
+      "case": "both_tools_activate",
+      "passed": true
+    },
+    {
+      "case": "left_release_preserves_right_after_switch",
+      "passed": true
+    },
+    {
+      "case": "unpossess_unbinds_component",
+      "passed": true
+    },
+    {
+      "case": "unpossess_removes_own_mapping",
+      "passed": true
+    },
+    {
+      "case": "unpossess_releases_input_owned_grips",
+      "passed": true
+    },
+    {
+      "case": "repossess_rebinds",
+      "passed": true
+    }
+  ],
+  "headset_tested": false,
+  "physical_player": true,
+  "passed": true
+}
