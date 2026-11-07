@@ -1,0 +1,54 @@
+{
+  "cases": [
+    {
+      "case": "checkpoint_capture",
+      "passed": true
+    },
+    {
+      "case": "input_left_and_right_grip",
+      "passed": true
+    },
+    {
+      "case": "input_independent_triggers",
+      "passed": true
+    },
+    {
+      "case": "both_tools_lit",
+      "passed": true
+    },
+    {
+      "case": "input_release_isolated_after_switch",
+      "passed": true
+    },
+    {
+      "case": "input_left_trigger_completed_zero",
+      "passed": true
+    },
+    {
+      "case": "input_right_trigger_retained",
+      "passed": true
+    },
+    {
+      "case": "tool_release_lights_isolated",
+      "passed": true
+    },
+    {
+      "case": "input_checkpoint_key_restores_pawn",
+      "passed": true
+    },
+    {
+      "case": "checkpoint_restores_props",
+      "passed": true
+    },
+    {
+      "case": "checkpoint_clears_velocity",
+      "passed": true
+    },
+    {
+      "case": "checkpoint_releases_both",
+      "passed": true
+    }
+  ],
+  "hardware_tested": false,
+  "passed": true
+}

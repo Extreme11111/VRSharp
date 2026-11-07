@@ -4,7 +4,7 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-source = (root / "Script/ManagedVRSharp/Core/VRSharpGrabbable.cs").read_text()
+source = (root / "Script/ManagedVRSharp/Core/VRSharpGrabbable.cs").read_text(encoding="utf-8-sig")
 start = source.index("public string GetGrabSetupIssues()")
 opening = source.index("{", start)
 end = opening + 1

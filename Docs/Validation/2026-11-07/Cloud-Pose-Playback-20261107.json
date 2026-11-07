@@ -1,0 +1,60 @@
+{
+  "cases": [
+    {
+      "case": "preview_started_BP_VRSharpHandLeft_C_0",
+      "passed": true
+    },
+    {
+      "case": "preview_started_BP_VRSharpHandRight_C_0",
+      "passed": true
+    },
+    {
+      "case": "native_blendspace_playing_0",
+      "passed": true
+    },
+    {
+      "case": "native_visual_enter_complete_0",
+      "passed": true
+    },
+    {
+      "case": "native_blendspace_playing_1",
+      "passed": true
+    },
+    {
+      "case": "native_visual_enter_complete_1",
+      "passed": true
+    },
+    {
+      "case": "actual_index_bone_moves_0",
+      "passed": true,
+      "rotation_radians": 1.39625084400177
+    },
+    {
+      "case": "actual_index_bone_moves_1",
+      "passed": true,
+      "rotation_radians": 1.39625084400177
+    },
+    {
+      "case": "actual_half_trigger_interpolates_0",
+      "passed": true,
+      "grip_distance": 0.698125422000885,
+      "pressed_distance": 0.698125422000885
+    },
+    {
+      "case": "actual_half_trigger_interpolates_1",
+      "passed": true,
+      "grip_distance": 0.698125422000885,
+      "pressed_distance": 0.698125422000885
+    },
+    {
+      "case": "original_animbp_restored_0",
+      "passed": true
+    },
+    {
+      "case": "original_animbp_restored_1",
+      "passed": true
+    }
+  ],
+  "hardware_tested": false,
+  "passed": true
+}

@@ -27,6 +27,7 @@ public partial class UVRSharpHandPose : USceneComponent
                     return false;
         }
         EnterBlendSeconds = preset.EnterBlendSeconds;
+        PoseBlendSpace = preset.PoseBlendSpace;
         ExitBlendSeconds = preset.ExitBlendSeconds;
         GripAnimation = preset.GripAnimation;
         PressedAnimation = preset.PressedAnimation;
@@ -64,6 +65,10 @@ public partial class UVRSharpHandPose : USceneComponent
     public partial UAnimSequence? GripAnimation { get; set; }
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial UAnimSequence? PressedAnimation { get; set; }
+
+    // Four samples: idle at (0,0)/(1,0), grip at (0,1), pressed at (1,1).
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UBlendSpace? PoseBlendSpace { get; set; }
 
     // Optional state key for existing animation graphs.
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]

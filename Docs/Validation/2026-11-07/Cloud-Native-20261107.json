@@ -1,0 +1,200 @@
+{
+  "cases": [
+    {
+      "case": "desktop_setup",
+      "passed": true
+    },
+    {
+      "case": "native_input_bound",
+      "passed": true
+    },
+    {
+      "case": "camera_not_hmd_locked",
+      "passed": true
+    },
+    {
+      "case": "both_hands_spawned",
+      "passed": true
+    },
+    {
+      "case": "tool_configuration",
+      "passed": true
+    },
+    {
+      "case": "enhanced_input_movement",
+      "passed": true,
+      "distance_cm": 275.0000040978193
+    },
+    {
+      "case": "enhanced_input_completed_stops",
+      "passed": true
+    },
+    {
+      "case": "left_preset_applied",
+      "passed": true
+    },
+    {
+      "case": "left_authored_grab",
+      "passed": true
+    },
+    {
+      "case": "left_held_component",
+      "passed": true
+    },
+    {
+      "case": "left_palm_alignment",
+      "passed": true,
+      "distance_cm": 0.0,
+      "rotation_error_radians": 0.0
+    },
+    {
+      "case": "left_trigger_lights_tool",
+      "passed": true
+    },
+    {
+      "case": "left_trigger_hysteresis",
+      "passed": true
+    },
+    {
+      "case": "left_trigger_release_threshold",
+      "passed": true
+    },
+    {
+      "case": "left_pressed_finger_weights",
+      "passed": true
+    },
+    {
+      "case": "left_release_state",
+      "passed": true
+    },
+    {
+      "case": "left_release_visual_trigger",
+      "passed": true
+    },
+    {
+      "case": "left_visual_exit_complete",
+      "passed": true
+    },
+    {
+      "case": "left_preview_isolated",
+      "passed": true
+    },
+    {
+      "case": "left_preview_trigger",
+      "passed": true
+    },
+    {
+      "case": "left_wrong_hand_pose_rejected",
+      "passed": true
+    },
+    {
+      "case": "left_disabled_grab_rejected",
+      "passed": true
+    },
+    {
+      "case": "left_distant_grab_rejected",
+      "passed": true
+    },
+    {
+      "case": "right_preset_applied",
+      "passed": true
+    },
+    {
+      "case": "right_authored_grab",
+      "passed": true
+    },
+    {
+      "case": "right_held_component",
+      "passed": true
+    },
+    {
+      "case": "right_palm_alignment",
+      "passed": true,
+      "distance_cm": 4.547473508864641e-13,
+      "rotation_error_radians": 5.1619135632563484e-08
+    },
+    {
+      "case": "right_trigger_lights_tool",
+      "passed": true
+    },
+    {
+      "case": "right_trigger_hysteresis",
+      "passed": true
+    },
+    {
+      "case": "right_trigger_release_threshold",
+      "passed": true
+    },
+    {
+      "case": "right_pressed_finger_weights",
+      "passed": true
+    },
+    {
+      "case": "right_release_state",
+      "passed": true
+    },
+    {
+      "case": "right_release_visual_trigger",
+      "passed": true
+    },
+    {
+      "case": "right_visual_exit_complete",
+      "passed": true
+    },
+    {
+      "case": "right_preview_isolated",
+      "passed": true
+    },
+    {
+      "case": "right_preview_trigger",
+      "passed": true
+    },
+    {
+      "case": "right_wrong_hand_pose_rejected",
+      "passed": true
+    },
+    {
+      "case": "right_disabled_grab_rejected",
+      "passed": true
+    },
+    {
+      "case": "right_distant_grab_rejected",
+      "passed": true
+    },
+    {
+      "case": "two_hand_first_grab",
+      "passed": true
+    },
+    {
+      "case": "single_hand_admission",
+      "passed": true
+    },
+    {
+      "case": "two_hand_second_grab",
+      "passed": true
+    },
+    {
+      "case": "first_holder_primary",
+      "passed": true
+    },
+    {
+      "case": "primary_handoff",
+      "passed": true
+    },
+    {
+      "case": "two_hand_final_release",
+      "passed": true
+    },
+    {
+      "case": "destroyed_grabbable_release_recovers",
+      "passed": true
+    },
+    {
+      "case": "regrab_after_destroyed_release",
+      "passed": true
+    }
+  ],
+  "hardware_tested": false,
+  "full_animation_clip_graph_tested": false,
+  "passed": true
+}

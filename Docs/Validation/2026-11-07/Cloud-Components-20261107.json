@@ -1,0 +1,62 @@
+{
+  "cases": [
+    {
+      "case": "different_colliders_left_grab",
+      "passed": true
+    },
+    {
+      "case": "different_colliders_right_grab",
+      "passed": true
+    },
+    {
+      "case": "per_hand_native_component_queries",
+      "passed": true
+    },
+    {
+      "case": "first_primary_component",
+      "passed": true
+    },
+    {
+      "case": "per_hand_query_after_primary_release",
+      "passed": true
+    },
+    {
+      "case": "two_trigger_rule_grabs",
+      "passed": true
+    },
+    {
+      "case": "two_trigger_one_is_off",
+      "passed": true
+    },
+    {
+      "case": "two_trigger_both_is_on",
+      "passed": true
+    },
+    {
+      "case": "two_trigger_release_is_off",
+      "passed": true
+    },
+    {
+      "case": "support_role_rule_grabs",
+      "passed": true
+    },
+    {
+      "case": "support_first_primary_trigger_is_right",
+      "passed": true
+    },
+    {
+      "case": "support_trigger_cannot_activate",
+      "passed": true
+    },
+    {
+      "case": "primary_trigger_with_support_activates",
+      "passed": true
+    },
+    {
+      "case": "support_release_deactivates",
+      "passed": true
+    }
+  ],
+  "hardware_tested": false,
+  "passed": true
+}

@@ -1,0 +1,40 @@
+{
+  "cases": [
+    {
+      "case": "single_possessed_desktop_rig",
+      "passed": true
+    },
+    {
+      "case": "scene_checkpoint_props_configured",
+      "passed": true
+    },
+    {
+      "case": "fivefold_mouse_gain_MouseX",
+      "passed": true
+    },
+    {
+      "case": "mouse_mapping_not_inverted_MouseX",
+      "passed": true
+    },
+    {
+      "case": "fivefold_mouse_gain_MouseY",
+      "passed": true
+    },
+    {
+      "case": "mouse_mapping_not_inverted_MouseY",
+      "passed": true
+    },
+    {
+      "case": "native_mouse_right_yaw",
+      "passed": true,
+      "yaw_degrees": 0.6999999880790713
+    },
+    {
+      "case": "native_mouse_up_pitch",
+      "passed": true,
+      "pitch_degrees": 0.699999988079071
+    }
+  ],
+  "hardware_tested": false,
+  "passed": true
+}

@@ -2,7 +2,7 @@
 from pathlib import Path
 import tempfile,subprocess
 root=Path(__file__).resolve().parents[1]
-src=(root/"Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs").read_text()
+src=(root/"Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs").read_text(encoding="utf-8-sig")
 def body(signature):
  i=src.index("{",src.index(signature)); end=i+1;depth=1
  while depth:
@@ -85,7 +85,7 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-desktop-grip-") as d:
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
 
 # Production held-trigger method; native validity/component access are doubles.
-src=(root/"Script/ManagedVRSharp/Core/VRSharpHand.cs").read_text()
+src=(root/"Script/ManagedVRSharp/Core/VRSharpHand.cs").read_text(encoding="utf-8-sig")
 trigger_code='''using System;
 class UVRSharpGrabbable {public int TriggerNotifications; public void NotifyGrabTrigger(object h,object c,float v){TriggerNotifications++;}}
 class UPrimitiveComponent {}
@@ -116,7 +116,7 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-held-trigger-") as d:
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
 
 # Verify that the Pawn only removes contexts that it installed itself.
-src = (root / "Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs").read_text()
+src = (root / "Script/ManagedVRSharp/Core/VRSharpDesktopTestPawn.cs").read_text(encoding="utf-8-sig")
 code = '''using System;
 using System.Collections.Generic;
 class UInputMappingContext {}
@@ -235,7 +235,7 @@ class Rig {
  public TSubclassOf<AVRSharpHand> LeftHandClass=new(){ClassId=1},RightHandClass=new(){ClassId=2};
  public USceneComponent? LeftTarget=new(),RightTarget=new();
  public UInputAction? DesktopMove=new(),DesktopLook=new(),DesktopHandMove=new(),DesktopGrip=new(),
-  DesktopSwitchHand=new(),DesktopTrigger=new(),DesktopHandRotate,DesktopToggleGrip,DesktopFingers,DesktopLeftTrigger,DesktopRightTrigger,
+  DesktopSwitchHand=new(),DesktopTrigger=new(),DesktopHandRotate,DesktopToggleGrip,DesktopFingers,DesktopLeftTrigger,DesktopRightTrigger,DesktopCaptureCheckpoint,DesktopRestoreCheckpoint,
   DesktopLeftGrip,DesktopRightGrip;
  public bool desktopHandsPrepared;
  public string GetDesktopSetupIssues()

@@ -43,6 +43,6 @@ public static void Main() {
 with tempfile.TemporaryDirectory(prefix="vrsharp-input-state-") as directory:
     path = Path(directory)
     (path/"Check.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings></PropertyGroup></Project>')
-    (path/"FingerInput.cs").write_text((root/"Script/ManagedVRSharp/Core/FingerInput.cs").read_text())
+    (path/"FingerInput.cs").write_text((root/"Script/ManagedVRSharp/Core/FingerInput.cs").read_text(encoding="utf-8-sig"))
     (path/"Program.cs").write_text("using VRSharp.Core; class TestHand { public bool IsGrabbing; private bool externalFingerInput; private bool xrTriggerBound=true; private float xrTrigger,activePoseTrigger; private int triggerCalls; private void SetGrabTrigger(float value){activePoseTrigger=value;triggerCalls++;} public float targetThumbWeight,targetIndexWeight,targetGraspWeight;\n"+"\n".join(methods)+test+"}")
     subprocess.run(["dotnet","run","--project",str(path/"Check.csproj"),"--configuration","Release"],check=True)

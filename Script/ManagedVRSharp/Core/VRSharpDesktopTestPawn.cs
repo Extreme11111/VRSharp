@@ -41,6 +41,10 @@ public partial class AVRSharpDesktopTestPawn : APawn
     public partial UInputAction? DesktopToggleGrip { get; set; }
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial UInputAction? DesktopFingers { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? DesktopCaptureCheckpoint { get; set; }
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UInputAction? DesktopRestoreCheckpoint { get; set; }
     private FVector fingerInput;
     [UFunction(FunctionFlags.BlueprintCallable)]
     public void SetEmptyHandInput(float thumb, float index, float grasp)
@@ -65,7 +69,7 @@ public partial class AVRSharpDesktopTestPawn : APawn
     private void RefreshDesktopMapping()
     {
         var context = DesktopMappingContext;
-        var controller = GetController() as APlayerController;
+        var controller = Controller as APlayerController;
         if (controller != mappingController || context != mappedContext)
             ClearDesktopMapping();
         if (mappingSubsystem is not null || context is null || controller is null ||
@@ -160,6 +164,8 @@ public partial class AVRSharpDesktopTestPawn : APawn
         CheckDesktopAction(issues, usedActions, nameof(DesktopHandRotate), DesktopHandRotate, false);
         CheckDesktopAction(issues, usedActions, nameof(DesktopToggleGrip), DesktopToggleGrip, false);
         CheckDesktopAction(issues, usedActions, nameof(DesktopFingers), DesktopFingers, false);
+        CheckDesktopAction(issues, usedActions, nameof(DesktopCaptureCheckpoint), DesktopCaptureCheckpoint, false);
+        CheckDesktopAction(issues, usedActions, nameof(DesktopRestoreCheckpoint), DesktopRestoreCheckpoint, false);
         return string.Join("\n", issues);
     }
 
@@ -242,6 +248,10 @@ public partial class AVRSharpDesktopTestPawn : APawn
         }
         if (DesktopToggleGrip is not null)
             input.BindAction(DesktopToggleGrip, ETriggerEvent.Started, OnDesktopToggleGrip, out _);
+        if (DesktopCaptureCheckpoint is not null)
+            input.BindAction(DesktopCaptureCheckpoint, ETriggerEvent.Started, OnDesktopCaptureCheckpoint, out _);
+        if (DesktopRestoreCheckpoint is not null)
+            input.BindAction(DesktopRestoreCheckpoint, ETriggerEvent.Started, OnDesktopRestoreCheckpoint, out _);
         if (DesktopFingers is not null)
         {
             input.BindAction(DesktopFingers, ETriggerEvent.Triggered, OnDesktopFingers, out _);
@@ -251,6 +261,12 @@ public partial class AVRSharpDesktopTestPawn : APawn
         boundDesktopInput = input;
         return true;
     }
+    [UFunction]
+    private void OnDesktopCaptureCheckpoint(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+        => CaptureDesktopCheckpoint();
+    [UFunction]
+    private void OnDesktopRestoreCheckpoint(FInputActionValue value, float elapsed, float triggered, UInputAction action)
+        => RestoreDesktopCheckpoint();
     [UFunction]
     private void OnDesktopMove(FInputActionValue value, float elapsed, float triggered, UInputAction action)
     { var v=value.GetAxis3D(); SetMoveInput((float)v.X,(float)v.Y,(float)v.Z); }

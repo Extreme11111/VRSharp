@@ -99,6 +99,35 @@ public partial class AVRSharpHand : AActor
     private float exitPoseTrigger;
     private bool previewingGrabPose;
     private float previewPoseTrigger;
+    private UBlendSpace? playingPoseBlendSpace;
+    private TSubclassOf<UObject> savedPoseAnimClass;
+
+    private void UpdatePoseClipPlayback()
+    {
+        if (HandMesh is not { } mesh || !SystemLibrary.IsValid(mesh)) return;
+        var clip = GetAnimationGrabPose()?.PoseBlendSpace;
+        if (clip is not null && (!SystemLibrary.IsValid(clip) || mesh.SkeletalMeshAsset is not { } skeletonMesh ||
+            !SystemLibrary.IsValid(skeletonMesh) || clip.Skeleton != skeletonMesh.Skeleton)) clip = null;
+
+        if (playingPoseBlendSpace != clip)
+        {
+            if (playingPoseBlendSpace is not null)
+            {
+                // Restore only the animation instance this hand took over.
+                if (mesh.AnimInstance is UAnimSingleNodeInstance previous && previous.AnimationAsset == playingPoseBlendSpace)
+                    mesh.AnimInstanceClass = savedPoseAnimClass;
+                playingPoseBlendSpace = null;
+            }
+            if (clip is not null && mesh.AnimationMode == EAnimationMode.AnimationBlueprint)
+            {
+                savedPoseAnimClass = mesh.GetAnimClass();
+                mesh.PlayAnimation(clip, true);
+                playingPoseBlendSpace = clip;
+            }
+        }
+        if (playingPoseBlendSpace is not null && mesh.AnimInstance is UAnimSingleNodeInstance instance)
+            instance.BlendSpacePosition = new FVector(GetGrabAnimationTrigger(), GetGrabPoseBlendWeight(), 0);
+    }
 
     // Visual pose survives logical release until its configured fade has completed.
     [UFunction(FunctionFlags.BlueprintCallable)]
@@ -335,6 +364,7 @@ public partial class AVRSharpHand : AActor
     {
         base.Tick(deltaSeconds);
         AdvancePoseAnimation(deltaSeconds);
+        UpdatePoseClipPlayback();
         ApplyXrTrigger();
         if (!IsGrabbing)
             RefreshGrabTarget();

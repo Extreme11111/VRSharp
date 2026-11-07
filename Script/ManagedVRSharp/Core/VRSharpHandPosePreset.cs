@@ -7,6 +7,9 @@ namespace VRSharp.Core;
 [UClass]
 public partial class UVRSharpHandPosePreset : UDataAsset
 {
+    // Optional native playback: X = trigger, Y = entry/exit weight (both 0..1).
+    [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
+    public partial UBlendSpace? PoseBlendSpace { get; set; }
     // Seconds; zero preserves the legacy immediate animation switch.
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial float EnterBlendSeconds { get; set; }

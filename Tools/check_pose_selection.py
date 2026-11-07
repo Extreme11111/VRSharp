@@ -2,7 +2,7 @@
 from pathlib import Path
 import tempfile,subprocess
 root=Path(__file__).resolve().parents[1]
-src=(root/"Script/ManagedVRSharp/Core/VRSharpHand.cs").read_text()
+src=(root/"Script/ManagedVRSharp/Core/VRSharpHand.cs").read_text(encoding="utf-8-sig")
 def body(signature):
  i=src.index("{",src.index(signature)); end=i+1;depth=1
  while depth:

@@ -233,6 +233,8 @@ public partial class UVRSharpGrabbable : UActorComponent
     public bool IsHeldBy(AVRSharpHand hand) => hand is not null && components.ContainsKey(hand);
     public UPrimitiveComponent? GetHeldComponent(AVRSharpHand hand)
         => hand is not null && components.TryGetValue(hand, out var value) && SystemLibrary.IsValid(value) ? value : null;
+    // Retain the accessor introduced on the independent per-hand collider branch.
+    public UPrimitiveComponent? GetGrabbedComponent(AVRSharpHand hand) => GetHeldComponent(hand);
     // Explicit snapshot: callers can enumerate safely while callbacks change holders.
     public AVRSharpHand[] GetGrabbingHands() => hands.ToArray();
 

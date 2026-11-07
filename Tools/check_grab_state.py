@@ -2,7 +2,7 @@
 from pathlib import Path
 import subprocess,tempfile
 root=Path(__file__).resolve().parents[1]
-s=(root/"Script/ManagedVRSharp/Core/VRSharpGrabbable.cs").read_text()
+s=(root/"Script/ManagedVRSharp/Core/VRSharpGrabbable.cs").read_text(encoding="utf-8-sig")
 def method(sig):
  start=s.index(sig); i=s.index("{",start); depth=1; end=i+1
  while depth:
@@ -227,7 +227,7 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-grab-check-") as d:
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
 
 # The real hand release method must recover even when a callback destroys its target.
-s = (root / "Script/ManagedVRSharp/Core/VRSharpHand.cs").read_text()
+s = (root / "Script/ManagedVRSharp/Core/VRSharpHand.cs").read_text(encoding="utf-8-sig")
 release_code = '''using System;
 enum EDetachmentRule { KeepWorld }
 class Native { public bool Valid=true; }

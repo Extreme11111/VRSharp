@@ -114,6 +114,6 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-flashlight-") as directory:
         '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType>'
         '<TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project>'
     )
-    (path / source.name).write_text(source.read_text())
+    (path / source.name).write_text(source.read_text(encoding="utf-8-sig"))
     (path / "Doubles.cs").write_text(doubles)
     subprocess.run(["dotnet", "run", "--project", str(path / "Check.csproj"), "--configuration", "Release"], check=True)

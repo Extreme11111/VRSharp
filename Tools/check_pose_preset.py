@@ -7,7 +7,7 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 sources = []
 for name in ("VRSharpHandPosePreset.cs", "VRSharpHandPose.cs"):
-    source = (root / "Script/ManagedVRSharp/Core" / name).read_text()
+    source = (root / "Script/ManagedVRSharp/Core" / name).read_text(encoding="utf-8-sig")
     source = re.sub(r"^using UnrealSharp\..*;\n|^namespace VRSharp.Core;\n|^\s*\[(?:UClass|UProperty|UFunction).*\]\n", "", source, flags=re.M)
     sources.append(source.replace("public partial ", "public "))
 
@@ -15,6 +15,7 @@ doubles = """using System;
 using System.Collections.Generic;
 public class Native { public bool Valid=true; }
 public class UAnimSequence : Native {}
+public class UBlendSpace : Native {}
 public class UDataAsset : Native {}
 public class Actor : Native {
  public List<UActorComponent> Components=new();
@@ -39,7 +40,7 @@ class Program {
   var legacy=new UVRSharpHandPose{EnterBlendSeconds=.3f,AnimationKey="Legacy"};
   legacy.BeginPlay();Check(legacy.EnterBlendSeconds==.3f&&legacy.AnimationKey=="Legacy");
   var preset=new UVRSharpHandPosePreset{
-   EnterBlendSeconds=.1f,ExitBlendSeconds=.2f,AnimationKey="Drill",GripAnimation=new(),PressedAnimation=new(),
+   EnterBlendSeconds=.1f,ExitBlendSeconds=.2f,AnimationKey="Drill",GripAnimation=new(),PressedAnimation=new(),PoseBlendSpace=new(),
    UseFingerWeights=true,UseTriggerBlend=true,ThumbWeight=.6f,IndexWeight=.2f,GraspWeight=.8f,TriggerIndexWeight=.9f
   };
   var body=new UPrimitiveComponent();var owner=new Actor();
@@ -49,6 +50,7 @@ class Program {
   var right=new UVRSharpHandPose{Owner=owner,AnimationPreset=preset,DisableLeftHand=true};
   left.BeginPlay();right.BeginPlay();
   Check(left.GripAnimation==preset.GripAnimation&&left.PressedAnimation==preset.PressedAnimation);
+  Check(left.PoseBlendSpace==preset.PoseBlendSpace&&right.PoseBlendSpace==preset.PoseBlendSpace);
   Check(left.EnterBlendSeconds==.1f&&left.ExitBlendSeconds==.2f&&left.AnimationKey=="Drill");
   Check(left.UseFingerWeights&&left.UseTriggerBlend&&left.ThumbWeight==.6f&&left.IndexWeight==.2f&&left.GraspWeight==.8f&&left.TriggerIndexWeight==.9f);
   Check(left.DisableRightHand&&left.TargetComponent==body&&left.ExclusiveToOneHand&&left.SupportGripOnly&&left.Priority==5);

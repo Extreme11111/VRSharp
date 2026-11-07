@@ -16,6 +16,9 @@ A physical VR framework plugin for Unreal Engine, with C# gameplay through Unrea
 - Camera-local neck marker, head collision sphere, and a shorter body capsule with the existing height adjustments preserved.
 - Modular VRSharpLab environment, editable Blender sources, imported meshes/materials, and lab collision helpers.
 - Physics locomotion and Lumen stability work in progress.
+- Desktop interaction acceptance Pawn, independent two-hand input, configurable grip admission, contextual events, authored poses, tool trigger rules and repeatable checkpoints.
+
+The local integration includes `/VRSharp/Maps/VRSharpDesktopTest` and a separate XR interaction acceptance room. See [the UE integration and validation record](Docs/Local-Integration-2026-11-07.md) for controls, native pose playback, 93 engine checks and remaining headset/packaging work. On Windows, run the independent checks with `Tools/cloud/run-checks.ps1`.
 
 The framework is still under development. Automated checks do not replace headset testing. Stair/uneven-ground traversal still needs a complete runtime validation pass, and reported time-varying lighting artifacts remain unresolved. The experimental hard-shadow workaround was reverted.
 
