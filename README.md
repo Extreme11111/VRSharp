@@ -25,6 +25,20 @@ Place this repository at `<UEProject>/Plugins/VRSharp` in an UnrealSharp-enabled
 
 The host project needs the VRSharp collision profiles/channels and suitable physics configuration. `VRSharpCollesion.ini` is the original collision-profile reference. `Examples/VRSharpLab/DefaultEngine.ini` is the current lab host configuration snapshot, including substepping and rendering settings; review and merge the relevant sections instead of replacing an existing project's configuration wholesale. Custom channel indices can conflict with other projects.
 
+Before opening the migrated map, run the read-only collision preflight with Python 3:
+
+```text
+python3 Tools/check_host_collision.py /path/to/host/Config/DefaultEngine.ini
+```
+
+Pass any relevant platform Engine INI files after the base file in load order.
+For a host with occupied reference slots, add `--plan` to propose free slots and
+print INI entries for missing channels. After reviewing and applying the plan,
+use `--allow-remapped-channels` to check the chosen custom slots, channel
+semantics and required profiles. The default check still requires the reference
+slot numbers. See [the migration handover](Docs/LocalUEHandover.md) for Blueprint
+remapping and PIE acceptance.
+
 ## Sources and checks
 
 - `ArtSource/VRSharpLab/`: final editable Blender scene, separate FBX parts, textures, and assembly manifests. The `.blend` and exported assets include geometry repairs; the initial modeling script alone does not reproduce every subsequent repair.
