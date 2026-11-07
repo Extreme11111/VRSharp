@@ -255,9 +255,18 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 
 ## PR #8 双手工具的主手扳机与副手支撑（2026-11-07）
 
-`Script/ManagedVRSharp/Core/VRSharpGrabbable.cs` 新增 `RequireSupportHandForPrimaryTrigger`。启用时，最早仍持有的主手使用原有按下及释放阈值控制工具，并需要另一只手成功抓住同一道具。副手抓取成功后，如果主手的扳机已超过按下阈值，工具立即启动。任一手放开时停止，副手接任主手后仍需另一手支撑。两个选项同时开启时优先使用原有 `RequireTwoTriggerHands` 双扳机规则。默认关闭新选项。
+`Script/ManagedVRSharp/Core/VRSharpGrabbable.cs` 新增 `RequireSupportHandForPrimaryTrigger`。启用时，最早仍持有且可操作扳机的手使用原有按下及释放阈值控制工具，并需要另一只手成功抓住同一道具。副手抓取成功后，如果主手的扳机已超过按下阈值，工具立即启动。任一手放开时停止，副手接任主手后仍需另一手支撑。两个选项同时开启时优先使用原有 `RequireTwoTriggerHands` 双扳机规则。默认关闭新选项。
 
 1. 在 UE5.7/UnrealSharp0.1 生成 Glue 并编译。打开 `/VRSharp/Tests/BP_VRSharpFlashlight` 或同结构的单刚体工具。用一个 Grabbable 和两个 HandPose，保持两个抓点指向 Body，设置左右手及独占限制。在 Grabbable 上关闭 `SingleHandOnly` 和 `RequireTwoTriggerHands`，开启新选项，按下阈值设 0.75，释放阈值设 0.55。手电筒 C# 示例直接消费现有 `TriggerActivationChanged` 事件，无需修改灯光蓝图。
 2. 无头显 PIE 使用两侧独立 Grip 和 Trigger。主手抓住并先按扳机，灯应保持关闭。另一手抓住后灯亮。松开副手应立即熄灭。重新抓住并单按副手扳机，灯仍保持关闭。反过来先抓右手，重复上述流程。开启旧双扳机规则后，验证两侧都按下才亮。
 3. 调试输出读取 `GetIsTriggerActive` 和 `GetPrimaryGrabbingHand`。在 C# 激活回调中，Hand 与 Component 是引起状态变化的抓放或输入操作，例如支撑手抓住后，亮灯通知的 Hand 是支撑手。道具业务逻辑可用主手查询获得实际控制手。既有扳机模拟值事件与手指动画仍各自更新。
 4. 托管回归覆盖失败的副手抓取、支撑加入及离开、主手交接和旧双扳机规则优先。完整 UE 编译、PIE 碰撞和动画以及 OpenXR 头显实测待本地验收。
+
+## PR #8 抓点的扳机角色（2026-11-07）
+
+`Script/ManagedVRSharp/Core/VRSharpHandPose.cs` 的 `SupportGripOnly` 可把抓点设为纯支撑。该手继续占用抓点并驱动按压动画，也会发出 `GrabTriggerChanged` 模拟值。只有允许控制的抓点可通过扳机输入激活工具，支撑抓放仍会改变双手模式的激活条件。所有已有抓点默认仍可控制工具。
+
+1. 用 UE5.7 和 UnrealSharp0.1 生成 Glue 并编译。在 `/VRSharp/Tests/BP_VRSharpFlashlight` 测试副本中，把前握把的 HandPose 勾选 `SupportGripOnly`，后握把保持关闭。两个抓点继续各自设置手别、TargetComponent、ExclusiveToOneHand、GripAnimation 与 PressedAnimation。Grabbable 启用 `RequireSupportHandForPrimaryTrigger`，关闭 `RequireTwoTriggerHands`。AnimBP 沿用当前抓点动画和扳机权重节点。
+2. 无头显 PIE 先抓前握把，再抓后握把。两手分别按扳机，前握把只动动画，后握把可点亮手电筒。放开前握把，灯应立即熄灭。交换抓取顺序再验一次，之后在 OpenXR 双手复测。
+3. C# 或调试 Widget 调用 `GetPrimaryTriggerHand` 读取最早仍持有且允许扳机的手，和 `GetPrimaryGrabbingHand` 的物理抓握顺序可分别显示。若改用 `RequireTwoTriggerHands`，须至少两手都抓在允许扳机的点上才可激活。低层 Attach 成功换到另一组件会清除旧抓点的扳机激活。
+4. 托管回归覆盖两种抓取顺序、支撑手模拟值、重新绑定组件及旧双扳机规则。完整 UE 编译、PIE 碰撞与动画、OpenXR 头显实测待验。

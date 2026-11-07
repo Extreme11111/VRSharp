@@ -58,7 +58,7 @@ public partial class UVRSharpGrabbable : UActorComponent
     [UProperty(PropertyFlags.BlueprintReadOnly | PropertyFlags.EditAnywhere)]
     public partial bool RequireTwoTriggerHands { get; set; }
 
-    // The first holder controls the tool while another hand holds it for support.
+    // The first trigger-capable holder controls the tool with another hand for support.
     [UProperty(PropertyFlags.BlueprintReadOnly | PropertyFlags.EditAnywhere)]
     public partial bool RequireSupportHandForPrimaryTrigger { get; set; }
 
@@ -70,8 +70,19 @@ public partial class UVRSharpGrabbable : UActorComponent
     {
         if (RequireTwoTriggerHands) return activeTriggerHands.Count >= 2;
         if (!RequireSupportHandForPrimaryTrigger) return activeTriggerHands.Count != 0;
-        return GrabCount >= 2 && PrimaryGrabbingHand is { } primary && activeTriggerHands.Contains(primary);
+        return GrabCount >= 2 && GetPrimaryTriggerHand() is { } primary && activeTriggerHands.Contains(primary);
     }
+
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public AVRSharpHand? GetPrimaryTriggerHand()
+    {
+        foreach (var hand in hands)
+            if (AllowsToolTrigger(hand)) return hand;
+        return null;
+    }
+
+    private bool AllowsToolTrigger(AVRSharpHand hand)
+        => !heldPoses.TryGetValue(hand, out var pose) || (SystemLibrary.IsValid(pose) && !pose.SupportGripOnly);
 
     [UFunction(FunctionFlags.BlueprintCallable)]
     public bool GetIsTriggerActive() => IsTriggerActive;
@@ -87,7 +98,8 @@ public partial class UVRSharpGrabbable : UActorComponent
         float release = TriggerReleaseThreshold;
         bool enabled = float.IsFinite(press) && float.IsFinite(release) &&
             press > 0 && press <= 1 && release >= 0 && release < press;
-        bool active = enabled && (activeTriggerHands.Contains(hand) ? value > release : value >= press);
+        bool active = enabled && AllowsToolTrigger(hand) &&
+            (activeTriggerHands.Contains(hand) ? value > release : value >= press);
         SetTriggerHandActive(hand, component, active);
         GrabTriggerChanged?.Invoke(hand, this, component, value);
     }
@@ -280,6 +292,7 @@ public partial class UVRSharpGrabbable : UActorComponent
         if (hand.IsGrabbing && hand.GrabbedObject != this) return;
         if (pose is not null && !CanUseGrabPose(pose)) return;
         if (!hand.AttachToComponent(component, "", EAttachmentRule.KeepWorld, EAttachmentRule.KeepWorld, EAttachmentRule.KeepWorld, true)) return;
+        activeTriggerHands.Remove(hand);
         components[hand] = component;
         if (pose is not null) heldPoses[hand] = pose;
         else heldPoses.Remove(hand);

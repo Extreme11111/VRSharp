@@ -146,3 +146,5 @@ Combined math, pose/trigger, desktop grip, event state and 192 admission policy 
 - 2026-11-07 PR #8 扩展桌面检查点以复位明确登记的单刚体 Grabbable。恢复时放下桌面持物，复位登记 Actor 并清零动量，仍被其他手持有时拒绝移动。资产布置和验收见 LocalUEHandover。
 
 - 2026-11-07 PR #8 为双手工具新增主手扳机及副手支撑模式，沿用桌面/OpenXR 输入和 Grabbable 激活事件。托管回归覆盖支撑失败、支撑加入和离开、主手交接及双扳机配置兼容。
+
+- 2026-11-07 PR #8 增加纯支撑抓点，允许双手工具的握把分配不同扳机角色。桌面和 OpenXR 共用激活规则，支撑手保留动画和模拟值。托管回归覆盖两种抓取顺序与换组件。

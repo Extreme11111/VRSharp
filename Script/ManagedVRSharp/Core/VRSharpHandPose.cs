@@ -9,6 +9,10 @@ public partial class UVRSharpHandPose : USceneComponent
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial bool ExclusiveToOneHand { get; set; }
 
+    // This grip still drives hand animation and counts as physical support.
+    [UProperty(PropertyFlags.BlueprintReadOnly | PropertyFlags.EditAnywhere)]
+    public partial bool SupportGripOnly { get; set; }
+
     // Explicit collider association takes precedence over legacy name mappings.
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]
     public partial UPrimitiveComponent? TargetComponent { get; set; }

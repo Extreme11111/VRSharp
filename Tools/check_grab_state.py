@@ -33,7 +33,7 @@ class AVRSharpHand {
  public bool AttachToComponent(UPrimitiveComponent c,string s,EAttachmentRule a,EAttachmentRule b,EAttachmentRule d,bool w){Attaches++;return Success;}
  public void DetachFromActor(EDetachmentRule a,EDetachmentRule b,EDetachmentRule c){Detaches++;}
 }
-class UVRSharpHandPose { public bool ExclusiveToOneHand; }
+class UVRSharpHandPose { public bool ExclusiveToOneHand,SupportGripOnly; }
 class UVRSharpGrabbable {
  public bool DropWithoutMomentum;
  private readonly Dictionary<AVRSharpHand,UVRSharpHandPose> heldPoses=new();
@@ -138,6 +138,33 @@ class Program {
  supported.NotifyGrabTrigger(b,secondGrip,1);Check(supported.IsTriggerActive);
  supported.Detach(a);supported.Detach(b);
  Console.WriteLine("Supported tool: primary trigger, successful support grab, handoff, release and two-trigger precedence passed.");
+ var roles=new UVRSharpGrabbable{TriggerPressThreshold=.75f,TriggerReleaseThreshold=.55f,
+  RequireSupportHandForPrimaryTrigger=true};
+ var foregrip=new UVRSharpHandPose{SupportGripOnly=true};
+ var analogSamples=new List<(AVRSharpHand,float)>();
+ roles.GrabTriggerChanged+=(h,o,p,value)=>analogSamples.Add((h,value));
+ foreach(bool supportFirst in new[]{true,false}){
+  if(supportFirst)roles.AttachWithPose(a,grip,foregrip);
+  roles.Attach(b,secondGrip);
+  if(!supportFirst)roles.AttachWithPose(a,grip,foregrip);
+  Check(roles.PrimaryGrabbingHand==(supportFirst?a:b)&&roles.GetPrimaryTriggerHand()==b);
+  roles.NotifyGrabTrigger(a,grip,.9f);Check(!roles.IsTriggerActive);
+  roles.NotifyGrabTrigger(b,secondGrip,.9f);Check(roles.IsTriggerActive);
+  roles.Detach(a);Check(!roles.IsTriggerActive);
+  roles.Detach(b);Check(roles.GetPrimaryTriggerHand()==null);
+ }
+ Check(analogSamples.SequenceEqual(new[]{(a,.9f),(b,.9f),(a,.9f),(b,.9f)}));
+ roles.RequireSupportHandForPrimaryTrigger=false;
+ roles.Attach(a,grip);roles.NotifyGrabTrigger(a,grip,1);Check(roles.IsTriggerActive);
+ roles.AttachWithPose(a,secondGrip,foregrip);
+ Check(!roles.IsTriggerActive&&roles.GetPrimaryTriggerHand()==null);
+ roles.NotifyGrabTrigger(a,secondGrip,1);Check(!roles.IsTriggerActive);
+ roles.Detach(a);
+ roles.RequireTwoTriggerHands=true;
+ roles.AttachWithPose(a,grip,foregrip);roles.Attach(b,secondGrip);
+ roles.NotifyGrabTrigger(a,grip,1);roles.NotifyGrabTrigger(b,secondGrip,1);
+ Check(!roles.IsTriggerActive);roles.Detach(a);roles.Detach(b);
+ Console.WriteLine("Support grip roles: either grab order, analog samples, retarget and two-trigger restrictions passed.");
  var slotted=new UVRSharpGrabbable();
  var handle=new UVRSharpHandPose{ExclusiveToOneHand=true};
  var support=new UVRSharpHandPose{ExclusiveToOneHand=true};
@@ -192,7 +219,11 @@ with tempfile.TemporaryDirectory(prefix="vrsharp-grab-check-") as d:
     +" internal bool CanUseGrabPose(UVRSharpHandPose pose) => SystemLibrary.IsValid(pose) && (!pose.ExclusiveToOneHand || !IsGrabPoseOccupied(pose));"
     +method("internal void AttachWithPose(")+method("public void Detach(")+method("internal void NotifyGrabTrigger(")
     +method("private void SetTriggerHandActive(")+method("private void PublishPrimaryGrabChange(")
-    +method("private bool EvaluateTriggerActivation(")+method("private void PublishTriggerActivationChange(")+tests)
+    +method("private bool EvaluateTriggerActivation(")+method("private void PublishTriggerActivationChange(")
+    +method("public AVRSharpHand? GetPrimaryTriggerHand(")
+    +" private bool AllowsToolTrigger(AVRSharpHand hand) => "
+    +s.split("private bool AllowsToolTrigger(AVRSharpHand hand)",1)[1].split("=>",1)[1].split(";",1)[0]+";"
+    +tests)
  subprocess.run(["dotnet","run","--project",str(p/"Check.csproj"),"--configuration","Release"],check=True)
 
 # The real hand release method must recover even when a callback destroys its target.
