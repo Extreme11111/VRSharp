@@ -39,6 +39,55 @@ public partial class UVRSharpGrabbable : UActorComponent
             SingleHandOnly, hand.IsLeft, hands.Count, hands.Contains(hand));
     }
 
+    // Run on demand after authoring or migration, outside the physics/input tick.
+    [UFunction(FunctionFlags.BlueprintCallable)]
+    public string GetGrabSetupIssues()
+    {
+        var issues = new List<string>();
+        var owner = Owner;
+        if (owner is null || !SystemLibrary.IsValid(owner)) return "Grabbable Owner is missing or invalid.";
+        bool triggerEnabled = TriggerPressThreshold != 0;
+        if (triggerEnabled && (!float.IsFinite(TriggerPressThreshold) || !float.IsFinite(TriggerReleaseThreshold) ||
+            TriggerPressThreshold <= 0 || TriggerPressThreshold > 1 ||
+            TriggerReleaseThreshold < 0 || TriggerReleaseThreshold >= TriggerPressThreshold))
+            issues.Add("Trigger thresholds require 0 <= release < press <= 1.");
+        if (SingleHandOnly && (RequireTwoTriggerHands || RequireSupportHandForPrimaryTrigger))
+            issues.Add("SingleHandOnly prevents the configured two-hand activation rule.");
+
+        bool hasLeftPose = false, hasRightPose = false, hasTriggerPose = false;
+        foreach (var component in owner.GetComponentsByClass<USceneComponent>())
+        {
+            if (component is not UVRSharpHandPose pose || !SystemLibrary.IsValid(pose)) continue;
+            string name = SystemLibrary.GetObjectName(pose);
+            if (!float.IsFinite(pose.EnterBlendSeconds) || pose.EnterBlendSeconds < 0 ||
+                !float.IsFinite(pose.ExitBlendSeconds) || pose.ExitBlendSeconds < 0)
+                issues.Add($"{name}: animation blend times must be finite and non-negative.");
+            var target = pose.TargetComponent;
+            if (target is null)
+            {
+                if (RequireExplicitGrabPose) issues.Add($"{name}: assign TargetComponent for explicit grabbing.");
+                continue;
+            }
+            if (!SystemLibrary.IsValid(target) || target.Owner != owner)
+            {
+                issues.Add($"{name}: TargetComponent must be a valid Primitive on this Actor.");
+                continue;
+            }
+            bool left = !DisableLeftHand && !pose.DisableLeftHand;
+            bool right = !DisableRightHand && !pose.DisableRightHand;
+            hasLeftPose |= left;
+            hasRightPose |= right;
+            hasTriggerPose |= !pose.SupportGripOnly && (left || right);
+        }
+        if (RequireExplicitGrabPose && !DisableGrabbing)
+        {
+            if (!DisableLeftHand && !hasLeftPose) issues.Add("Left hand has no compatible explicit grab pose.");
+            if (!DisableRightHand && !hasRightPose) issues.Add("Right hand has no compatible explicit grab pose.");
+            if (triggerEnabled && !hasTriggerPose) issues.Add("Tool activation has no trigger-capable explicit grab pose.");
+        }
+        return string.Join("\n", issues);
+    }
+
     #region 抓握姿态
 
     [UProperty(PropertyFlags.BlueprintReadWrite | PropertyFlags.EditAnywhere)]

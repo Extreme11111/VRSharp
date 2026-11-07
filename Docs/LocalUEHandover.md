@@ -270,3 +270,12 @@ UE5.7/UnrealSharp0.1 先生成 Glue 并编译，检查 SpawnActor、DestroyActor
 2. 无头显 PIE 先抓前握把，再抓后握把。两手分别按扳机，前握把只动动画，后握把可点亮手电筒。放开前握把，灯应立即熄灭。交换抓取顺序再验一次，之后在 OpenXR 双手复测。
 3. C# 或调试 Widget 调用 `GetPrimaryTriggerHand` 读取最早仍持有且允许扳机的手，和 `GetPrimaryGrabbingHand` 的物理抓握顺序可分别显示。若改用 `RequireTwoTriggerHands`，须至少两手都抓在允许扳机的点上才可激活。低层 Attach 成功换到另一组件会清除旧抓点的扳机激活。
 4. 托管回归覆盖两种抓取顺序、支撑手模拟值、重新绑定组件及旧双扳机规则。完整 UE 编译、PIE 碰撞与动画、OpenXR 头显实测待验。
+
+## PR #8 抓取配置报告与迁移检查（2026-11-07）
+
+`Script/ManagedVRSharp/Core/VRSharpGrabbable.cs` 新增 `GetGrabSetupIssues`，C# 和蓝图均可调用。返回文本逐行包含字段或抓点名。报告检查显式抓点的 TargetComponent、左右手可用性、工具启动所需的控制抓点、扳机阈值、动画过渡时间和互斥的单/双手配置。该查询按需运行，配置修改后可重新检查。
+
+1. 用 UE5.7/UnrealSharp0.1 生成 Glue 并编译。在桌面测试 Widget 中添加“检查道具”按钮和多行 TextBlock。OnClicked 从选定测试 Actor 取得 Grabbable 引用，调用 `GetGrabSetupIssues`，把 Return Value 接到 TextBlock 的 SetText。可同时显示 Pawn 的 `GetDesktopSetupIssues`，分别定位输入/手实例配置和道具抓点配置。报告为空表示所检查配置项通过。
+2. 复制 `/VRSharp/Tests/BP_VRSharpFlashlight`，开启 RequireExplicitGrabPose。在一侧 HandPose 清空 TargetComponent，运行查询，应显示该抓点名称及缺少的手别。恢复到同 Actor 的 Body，确认该项清空。迁移后组件引用指向其他 Actor 或失效时也应定位到具体抓点。
+3. 开启 SingleHandOnly，同时开启任一双手启动规则，应报告配置冲突。把两侧抓点都设为 SupportGripOnly，保持扳机启用，应报告没有可操作扳机的抓点。逐项修复再查询，随后正常抓取、扳机和放下。动画骨架兼容、碰撞响应和按键映射仍按前文进行 PIE 验收。
+4. 云端托管回归覆盖缺失/外部/失效引用、手别配置、规则冲突和修复后复查。两个独立数学检查也在本轮运行。完整 UE 编译、查询蓝图 Glue、PIE 和头显实测待验。

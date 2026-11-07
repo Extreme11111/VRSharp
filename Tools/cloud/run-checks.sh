@@ -16,3 +16,5 @@ dotnet run --project Tools/FingerInputChecks/FingerInputChecks.csproj --configur
 python3 Tools/check_finger_input_state.py
 
 python3 Tools/check_flashlight_demo.py
+
+python3 Tools/check_grab_setup.py
